@@ -147,9 +147,7 @@ const create = (name, force = false) => {
   }
 };
 
-const connect = ({
-  querydb
-}) => {
+const connect = (querydb) => {
   let {
     database,
     username,

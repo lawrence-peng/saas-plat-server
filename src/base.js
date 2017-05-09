@@ -3,7 +3,7 @@ saasplat server interface
 */
 import path from 'path';
 import mvc from './mvc';
-import cqrs from 'cqrs';
+import cqrs from 'cqrs-fx';
 import orm from './orm';
 import logger from './log';
 import conf from './config';
@@ -136,7 +136,7 @@ saasplat.logic.base = class extends mvc.logic.base {
 };
 
 // 领域层使用cqrs
-saasplat.repository = class extends cqrs.repository {
+saasplat.repository = class  {
   static get(name, id, module, ...other) {
     module = (module || saasplat.module) + '/domain/';
     return cqrs.repository.get(module + name, id, ...other);

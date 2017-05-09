@@ -1,19 +1,23 @@
+import 'babel-polyfill';
 import fs from 'fs';
 import path from 'path';
 import assert from 'assert';
-import 'babel-polyfill';
+import glob from 'glob';
 
 import mvc from './mvc';
-import * as cqrs from 'cqrs/lib/core';
-import * as cqrsRegister from 'cqrs/lib/register';
+import {
+  app
+} from './mvc';
+import * as cqrs from 'cqrs-fx/lib/core';
+import * as cqrsRegister from 'cqrs-fx/lib/register';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
 
-import './base';
-
 import AutoReload from './util/auto_reload';
 import WatchCompile from './util/watch_compile';
+
+import './base';
 
 //const _modules = ['controller', 'logic', 'service', 'view', 'model', 'event', 'command', 'domain', 'config'];
 const mvcTypes = ['controller', 'logic', 'service']; // model -> orm config -> config
@@ -27,6 +31,7 @@ export default class {
     appPath,
     devPath,
     modules,
+    devModules,
     querydb,
     eventdb,
     debug,
@@ -37,7 +42,19 @@ export default class {
     this.debugOutput = !!debugOutput;
     saasplat.appPath = this.appPath = appPath;
     this.devPath = devPath;
-    saasplat.module = modules;
+    if (Array.isArray(modules)) {
+      this.module = modules;
+    } else if (typeof modules == 'string') {
+      this.glob = modules;
+    } else {
+      saasplat.log('module not found');
+    }
+    if (Array.isArray(devModules)) {
+      this.module = (this.module || []).concat(devModules);
+    } else if (typeof modules == 'string') {
+      this.devGlob = modules;
+    }
+    this.devGlob = devModules;
     saasplat.eventdb = eventdb;
     saasplat.querydb = querydb;
     saasplat.debugMode = this.debugMode = debug || false;
@@ -56,38 +73,19 @@ export default class {
     return `${this.appPath}${prefix}${path.sep}${mod}app${path.sep}${type}`;
   }
 
-  _loadSubModule(name) {
-    // todo dev path?
-    let dir = path.join(this.appPath, name);
-    let module = [];
-    if (fs.statSync(dir).isDirectory()) {
-      let dirs = fs.readdirSync(dir);
-      if (dirs.length <= 0) return; // 空模块
-      let isModule = false;
-      for (let child of dirs) {
-        //if (_modules.indexOf(child) >= 0) {
-        if (child.toLowerCase() == 'package.json') {
-          isModule = true;
-          break;
-        }
-      }
-      if (!isModule) {
-        for (let child of dirs) {
-          module = module.concat(this._loadSubModule(path.join(name, child)));
-        }
-      } else {
-        //think.module.push(name); //加一起用thinkjs的原有的路由
-        module.push(name);
-      }
-    }
-    return module;
-  }
-
   loadModule() {
     if (this.module) {
+      this.logDebug('load modules ' + this.module);
       return;
     }
-    this.module = this._loadSubModule('');
+
+    let devModules = this.devPath ? glob.sync(this.devGlob, {
+      cwd: this.devPath
+    }) : [];
+    let appModules = glob.sync(this.glob, {
+      cwd: this.appPath
+    }).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
+    this.module = appModules.concat(devModules);
     this.logDebug('load modules ' + this.module);
   }
 
@@ -188,7 +186,7 @@ export default class {
     let instance = new WatchCompile(this.devPath, this.module, options, this.compileCallback);
     instance.run();
 
-    mvc.compile(options);
+    //app.compile(options);
   }
 
   clearData() {
@@ -290,6 +288,10 @@ export default class {
   }
 
   autoReload() {
+    if (!this.devPath){
+      // 没有需要动态加载的目录
+      return;
+    }
     //it auto reload by watch compile
     if (this.compileCallback) {
       return;
@@ -342,10 +344,11 @@ export default class {
     this.load();
     this.autoReload();
     if (preload) {
+      app.preload();
       this.preload();
     }
     this.captureError();
     boots.startup();
-    mvc.run();
+    mvc.require('app').run();
   }
 }

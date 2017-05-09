@@ -11,9 +11,9 @@ var instance = new thinkjs({
   env: 'development'
 });
 
-//compile src/ to app/
-// instance.compile({
-//   log: true
-// });
+// 需要加载类型
+instance.start();
 
-export default instance;
+export const app = instance;
+
+export default think;

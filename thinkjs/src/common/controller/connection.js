@@ -1,5 +1,5 @@
 
-export default class extends saasplat.controller.rest {
+export default class extends think.controller.rest {
 
   async getAction() {
     return this.success({

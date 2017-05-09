@@ -9,9 +9,11 @@ var instance = new app({
   appPath: path.normalize('node_modules'),
   devPath: path.normalize(path.join(process.cwd(), 'src')),
   // 模块配置文件
-  modules: config.modules,
+  modules: config.modules || 'saas-plat-server-*',
+  devModules: "*"
   // 模块配置文件
-  db: config.db,
+  querydb: config.querydb,
+  eventdb: config.eventdb,
   // 服务
   roles: config.roles || ['web', 'app', 'task', 'mq', 'workflow'],
   debug: true
