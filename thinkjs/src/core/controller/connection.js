@@ -1,7 +1,7 @@
 
 export default class extends think.controller.rest {
 
-  async getAction() {
+  getAction() {
     return this.success({
       date: (new Date()).getTime()
     });

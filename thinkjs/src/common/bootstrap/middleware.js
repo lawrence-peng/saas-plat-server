@@ -1,8 +1,8 @@
 
 think.middleware('module_route_parse', http =>{
-   http.module = 'core';
-   http.controller = 'connection';
-   http.action = 'get';
+   http.module = '';
+   //http.controller = 'connection';
+   //http.action = 'get';
 });
 
 think.middleware('module_locate_template', (http, options) =>{
