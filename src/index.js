@@ -10,6 +10,7 @@ import {
 } from './mvc';
 import * as cqrs from 'cqrs-fx/lib/core';
 import * as cqrsRegister from 'cqrs-fx/lib/register';
+import * as cqrsConfiger from 'cqrs-fx/lib/config';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
@@ -22,7 +23,7 @@ import './base';
 //const _modules = ['controller', 'logic', 'service', 'view', 'model', 'event', 'command', 'domain', 'config'];
 const mvcTypes = ['controller', 'logic', 'service']; // model -> orm config -> config
 const ormTypes = ['model'];
-const cqrsTypes = ['command', 'domain', 'event', 'config'];
+const cqrsTypes = ['command', 'domain', 'event'];
 const bootTypes = ['bootstrap'];
 const configTypes = ['config'];
 
@@ -70,7 +71,27 @@ export default class {
     if (think.mode === think.mode_module) {
       mod = module + path.sep;
     }
-    return `${this.appPath}${prefix}${path.sep}${mod}app${path.sep}${type}`;
+    let subPath;
+    if (this.moduleConfigs[module]) {
+      subPath = this.moduleConfigs[module].main;
+    } else {
+      let searchPath = this.appPath;
+      if (this.devModules.indexOf(module) > -1) {
+        searchPath = this.devPath;
+      }
+      let config;
+      // package可以配置main文件夹，默认app
+      let packagefile = path.join(searchPath, module, 'package.json');
+      if (fs.existsSync(packagefile)) {
+        config = JSON.parse(fs.readFileSync(packagefile));
+      }
+      if (!config) {
+        config = {};
+      }
+      this.moduleConfigs[module] = config;
+      subPath = config.main;
+    }
+    return `${this.devModules.indexOf(module)>-1?this.devPath:this.appPath}${prefix}${path.sep}${mod}${subPath || 'app'}${path.sep}${type}`;
   }
 
   loadModule() {
@@ -78,13 +99,13 @@ export default class {
       this.logDebug('load modules ' + this.module);
       return;
     }
-
     let devModules = this.devPath ? glob.sync(this.devGlob, {
       cwd: this.devPath
     }) : [];
     let appModules = glob.sync(this.glob, {
       cwd: this.appPath
     }).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
+    this.devModules = devModules;
     this.module = appModules.concat(devModules);
     this.logDebug('load modules ' + this.module);
   }
@@ -123,6 +144,21 @@ export default class {
         cqrs.alias(moduleType, filepath);
       });
     }
+    cqrsConfiger.init({
+      bus: {
+        commandBus: 'direct',
+        eventBus: 'mq'
+      },
+      event: {
+        storage: 'domain_event'
+      },
+      repository: {
+        type: 'event_sourced'
+      },
+      snapshot: {
+        provider: 'event_number'
+      }
+    })
     cqrsRegister.register();
     this.logDebug('load CQRS type \n', cqrs.alias());
   }
@@ -183,7 +219,7 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    let instance = new WatchCompile(this.devPath, this.module, options, this.compileCallback);
+    let instance = new WatchCompile(this.devPath, this.devModules, options, this.compileCallback);
     instance.run();
 
     //app.compile(options);
@@ -269,6 +305,7 @@ export default class {
   }
 
   load() {
+    this.moduleConfigs = {};
     this.loadModule();
     this.loadORM();
     this.loadMVC();
@@ -288,7 +325,7 @@ export default class {
   }
 
   autoReload() {
-    if (!this.devPath){
+    if (!this.devPath) {
       // 没有需要动态加载的目录
       return;
     }

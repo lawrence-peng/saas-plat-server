@@ -7,9 +7,9 @@ var config = JSON.parse(fs.readFileSync(path.normalize(path.join(process.cwd(), 
 
 // load app module
 var instance = new app({
-  appPath: path.normalize('node_modules'),
+  appPath: path.join(process.cwd(),'node_modules'),
   // 模块配置文件
-  modules: config.modules || 'saas-plat-server-*',
+  modules: config.modules || 'saas-plat-*',
   // 模块配置文件
   querydb: config.querydb,
   eventdb: config.eventdb,

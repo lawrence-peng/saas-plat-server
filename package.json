@@ -37,7 +37,7 @@
   },
   "repository": "http://git.oschina.net/saas-plat/saas-plat-server",
   "license": "MIT",
-  "modules": "saas-plat-server-*",
+  "modules": "saas-plat-*",
   "eventdb": {
     "username": "root",
     "password": "123456",

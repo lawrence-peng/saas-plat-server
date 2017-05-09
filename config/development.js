@@ -6,10 +6,10 @@ var config = JSON.parse(fs.readFileSync(path.normalize(path.join(process.cwd(), 
 
 // load app module
 var instance = new app({
-  appPath: path.normalize('node_modules'),
-  devPath: path.normalize(path.join(process.cwd(), 'src')),
+  appPath: path.join(process.cwd(), 'node_modules'),
+  devPath: path.join(process.cwd(), 'src'),
   // 模块配置文件
-  modules: config.modules || 'saas-plat-server-*',
+  modules: config.modules || 'saas-plat-*',
   devModules: "*"
   // 模块配置文件
   querydb: config.querydb,
