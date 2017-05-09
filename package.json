@@ -3,14 +3,14 @@
   "description": "saasplat base server",
   "version": "1.0.0",
   "scripts": {
-    "debug": "node-debug --web-port=9900 --no-preload www/development.js",
-    "start": "node thinkjs/config/development.js",
+    "start": "node config/production.js",
+    "debug": "node-debug --web-port=9900 --no-preload config/production.js",
     "compile-thinkjs": "babel --presets es2015,stage-1 --plugins transform-runtime thinkjs/src/ --out-dir thinkjs/app/ --source-maps",
     "watch-compile-thinkjs": "babel --watch --presets es2015,stage-0,stage-1,stage-2,stage-3 --plugins transform-runtime thinkjs/src/ --out-dir thinkjs/app/ --source-maps",
     "compile": "babel --presets es2015,stage-1 --plugins transform-runtime src/ --out-dir app/ --source-maps",
     "watch-compile": "babel --watch --presets es2015,stage-0,stage-1,stage-2,stage-3 --plugins transform-runtime src/ --out-dir app/ --source-maps",
-    "watch": "npm run watch-compile",
-    "prepublish": "npm run compile npm && run compile-thinkjs"
+    "watch": "npm run watch-compile && npm run watch-compile-thinkjs",
+    "prepublish": "npm run compile && npm run compile-thinkjs"
   },
   "dependencies": {
     "assert": "^1.4.1",
@@ -35,5 +35,20 @@
     "babel-core": "6.x.x"
   },
   "repository": "http://git.oschina.net/saas-plat/saas-plat-server",
-  "license": "MIT"
+  "license": "MIT",
+  "modules":[],
+  "eventdb": {
+    "username": "root",
+    "password": "123456",
+    "database": "testserver1_events",
+    "host": "localhost",
+    "dialect": "mysql"
+  },
+  "querydb": {
+    "username": "root",
+    "password": "123456",
+    "database": "testserver1_querys",
+    "host": "localhost",
+    "dialect": "mysql"
+  }
 }

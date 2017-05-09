@@ -25,23 +25,27 @@ const configTypes = ['config'];
 export default class {
   constructor({
     appPath,
+    devPath,
     modules,
-    db,
+    querydb,
+    eventdb,
     debug,
     debugOutput
   }) {
     assert(appPath);
-    assert(db);
+    assert(querydb);
     this.debugOutput = !!debugOutput;
     saasplat.appPath = this.appPath = appPath;
+    this.devPath = devPath;
     saasplat.module = modules;
-    saasplat.db = db;
+    saasplat.eventdb = eventdb;
+    saasplat.querydb = querydb;
     saasplat.debugMode = this.debugMode = debug || false;
     if (saasplat.debugMode) {
       saasplat.log('saasplat debug mode');
     }
     // 连接查询库
-    orm.db = orm.connect(db.querydb);
+    orm.db = orm.connect(querydb);
   }
 
   _getPath(module, type, prefix = '') {
@@ -53,6 +57,7 @@ export default class {
   }
 
   _loadSubModule(name) {
+    // todo dev path?
     let dir = path.join(this.appPath, name);
     let module = [];
     if (fs.statSync(dir).isDirectory()) {
@@ -172,7 +177,7 @@ export default class {
 
   compile(options = {}) {
     this.loadModule();
-    this.logDebug(`watch ${this.appPath}{path.sep}**{path.sep}src for compile...`);
+    this.logDebug(`watch ${this.devPath}{path.sep}**{path.sep}src for compile...`);
     let reloadInstance = this.getReloadInstance();
     this.compileCallback = changedFiles => {
       reloadInstance.clearFilesCache(changedFiles);
@@ -180,8 +185,10 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    let instance = new WatchCompile(this.appPath, this.module, options, this.compileCallback);
+    let instance = new WatchCompile(this.devPath, this.module, options, this.compileCallback);
     instance.run();
+
+    mvc.compile(options);
   }
 
   clearData() {
@@ -274,7 +281,7 @@ export default class {
   }
 
   getReloadInstance() {
-    let instance = new AutoReload(this.appPath, this.module, () => {
+    let instance = new AutoReload(this.devPath, this.module, () => {
       this.clearData();
       this.load();
       boots.startup();
