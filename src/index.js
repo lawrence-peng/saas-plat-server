@@ -23,7 +23,7 @@ import './base';
 //const _modules = ['controller', 'logic', 'service', 'view', 'model', 'event', 'command', 'domain', 'config'];
 const mvcTypes = ['controller', 'logic', 'service']; // model -> orm config -> config
 const ormTypes = ['model'];
-const cqrsTypes = ['command', 'domain', 'event'];
+const cqrsTypes = ['command', 'domain', 'event', 'config'];
 const bootTypes = ['bootstrap'];
 const configTypes = ['config'];
 

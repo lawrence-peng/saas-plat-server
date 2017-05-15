@@ -14,7 +14,7 @@ var instance = new app({
   querydb: config.querydb,
   eventdb: config.eventdb,
   // 服务
-  roles: config.roles || ['web', 'app', 'task', 'mq', 'workflow'],
+  roles: config.roles || ['web', 'app', 'task', 'workflow'],
   debugOutput: true
 });
 instance.run();
