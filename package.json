@@ -3,7 +3,7 @@
   "description": "saasplat base server",
   "version": "1.0.0",
   "scripts": {
-    "start": "node config/production.js",
+    "start": "node config/testing.js",
     "debug": "node-debug --web-port=9900 --no-preload config/production.js",
     "compile-thinkjs": "babel thinkjs/src/ --out-dir thinkjs/app/ --source-maps",
     "watch-compile-thinkjs": "babel --watch thinkjs/src/ --out-dir thinkjs/app/ --source-maps",
@@ -42,20 +42,5 @@
     "babel-core": "6.x.x"
   },
   "repository": "http://git.oschina.net/saas-plat/saas-plat-server",
-  "license": "Apache License",
-  "modules": "saas-plat-*",
-  "eventdb": {
-    "username": "root",
-    "password": "123456",
-    "database": "testserver1_events",
-    "host": "localhost",
-    "dialect": "mysql"
-  },
-  "querydb": {
-    "username": "root",
-    "password": "123456",
-    "database": "testserver1_querys",
-    "host": "localhost",
-    "dialect": "mysql"
-  }
+  "license": "Apache License"
 }

@@ -1,0 +1,17 @@
+{
+  "modules": "saas-plat-*",
+  "eventdb": {
+    "username": "root",
+    "password": "123456",
+    "database": "testserver1_events",
+    "host": "localhost",
+    "dialect": "mysql"
+  },
+  "querydb": {
+    "username": "root",
+    "password": "123456",
+    "database": "testserver1_querys",
+    "host": "localhost",
+    "dialect": "mysql"
+  }
+}

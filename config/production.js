@@ -3,7 +3,7 @@ var app = require('../app').default;
 var path = require('path');
 var fs = require('fs');
 
-var config = JSON.parse(fs.readFileSync(path.normalize(path.join(process.cwd(), 'package.json'))));
+var config = JSON.parse(fs.readFileSync(path.normalize(path.join(process.cwd(), 'tenant.json'))));
 
 // load app module
 var instance = new app({
@@ -14,7 +14,6 @@ var instance = new app({
   querydb: config.querydb,
   eventdb: config.eventdb,
   // 服务
-  roles: config.roles || ['web', 'app', 'task', 'workflow'],
-  debugOutput: true
+  roles: config.roles || ['web', 'app', 'task', 'workflow']
 });
 instance.run();

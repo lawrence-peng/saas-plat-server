@@ -1,15 +1,25 @@
-var app = require('./app').default;
+require ('babel-polyfill');
+var app = require('../app').default;
 var path = require('path');
+var fs = require('fs');
 
-var rootPath = path.dirname(__dirname);
+var config = JSON.parse(fs.readFileSync(path.normalize(path.normalize(__dirname, '/../tenant.json'))));
 
-exports.run = function(roles){
-  // load app module
-  var instance = new app({
-    rootPath: rootPath,
-    appPath : rootPath + path.sep + 'apps',
-    debug: true,
-    roles: roles
-  });
-  instance.run();
-};
+// load app module
+var instance = new app({
+  appPath: path.normalize(path.normalize(__dirname, '/../node_modules'),
+  devPath: path.normalize(path.normalize(__dirname,'/../demo'),
+  // 模块配置文件
+  modules: config.modules || 'saas-plat-*',
+  devModules: "*"
+  // 模块配置文件
+  querydb: config.querydb,
+  eventdb: config.eventdb,
+  // 服务
+  roles: config.roles || ['web', 'app', 'task', 'workflow'],
+  debugOutput: true
+});
+instance.compile({
+  log: true
+});
+instance.run();

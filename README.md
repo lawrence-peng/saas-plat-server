@@ -15,23 +15,25 @@
   npm install saas-plat-erp-base saas-plat-retail_pos saas-plat-stock_control saas-plat-purchase_sale
 ```
 
-需要在调用项目的package.json配置服务器信息
+需要在项目跟目录创建一个tenant.json配置服务器信息
 
 ```
-"modules": "saas-plat-*",  // glob 或 ['xxx','xxx2']
-"eventdb": {
-  "username": "root",
-  "password": "123456",
-  "database": "testserver1_events",
-  "host": "localhost",
-  "dialect": "mysql"
-},
-"querydb": {
-  "username": "root",
-  "password": "123456",
-  "database": "testserver1_querys",
-  "host": "localhost",
-  "dialect": "mysql"
+{
+  "modules": "saas-plat-*",  // glob 或 ['xxx','xxx2']
+  "eventdb": {
+    "username": "root",
+    "password": "123456",
+    "database": "testserver1_events",
+    "host": "localhost",
+    "dialect": "mysql"
+  },
+  "querydb": {
+    "username": "root",
+    "password": "123456",
+    "database": "testserver1_querys",
+    "host": "localhost",
+    "dialect": "mysql"
+  }
 }
 ```
 
@@ -53,7 +55,7 @@
   - app     // es5
   - package.json
 
-saas-plat-server是**前后端分离**的模式，server只能提供api接口，
+saas-plat-server是前后端分离的模式，server只能提供api接口，
 如果需要高体验的前端，参见<https://github.com/saas-plat/saas-plat-native>
 
 **可以安装saas-plat-cli工具构建项目**
