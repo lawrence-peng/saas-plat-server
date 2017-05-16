@@ -1,11 +1,7 @@
 {
   "modules": "saas-plat-*",
   "eventdb": {
-    "username": "root",
-    "password": "123456",
-    "database": "testserver1_events",
-    "host": "localhost",
-    "dialect": "mysql"
+    "url": "mongodb://localhost:27017/cqrs"
   },
   "querydb": {
     "username": "root",

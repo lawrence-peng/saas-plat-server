@@ -6,11 +6,9 @@ import glob from 'glob';
 
 import mvc from './mvc';
 import {
-  app
+  app as mvcInstance
 } from './mvc';
-import * as cqrs from 'cqrs-fx/lib/core';
-import * as cqrsRegister from 'cqrs-fx/lib/register';
-import * as cqrsConfiger from 'cqrs-fx/lib/config';
+import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
@@ -30,11 +28,13 @@ const configTypes = ['config'];
 export default class {
   constructor({
     appPath,
+    srcPath,
     devPath,
     modules,
     devModules,
     querydb,
     eventdb,
+    eventmq,
     debug,
     debugOutput
   }) {
@@ -42,6 +42,7 @@ export default class {
     assert(querydb);
     this.debugOutput = !!debugOutput;
     saasplat.appPath = this.appPath = appPath;
+    this.srcPath = srcPath;
     this.devPath = devPath;
     if (Array.isArray(modules)) {
       this.module = modules;
@@ -64,6 +65,10 @@ export default class {
     }
     // 连接查询库
     orm.db = orm.connect(querydb);
+    cqrs.init({
+      eventmq,
+      eventdb
+    })
   }
 
   _getPath(module, type, prefix = '') {
@@ -144,22 +149,6 @@ export default class {
         cqrs.alias(moduleType, filepath);
       });
     }
-    cqrsConfiger.init({
-      bus: {
-        commandBus: 'direct',
-        eventBus: 'mq'
-      },
-      event: {
-        storage: 'domain_event'
-      },
-      repository: {
-        type: 'event_sourced'
-      },
-      snapshot: {
-        provider: 'event_number'
-      }
-    })
-    cqrsRegister.register();
     this.logDebug('load CQRS type \n', cqrs.alias());
   }
 
@@ -209,9 +198,9 @@ export default class {
     this.logDebug('load config type \n', config.alias());
   }
 
-  compile(options = {}) {
-    this.loadModule();
-    this.logDebug(`watch ${this.devPath}{path.sep}**{path.sep}src for compile...`);
+  compile(options) {
+    //this.loadModule();
+    this.logDebug(`watch ${this.srcPath} for compile...`);
     let reloadInstance = this.getReloadInstance();
     this.compileCallback = changedFiles => {
       reloadInstance.clearFilesCache(changedFiles);
@@ -219,10 +208,13 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    let instance = new WatchCompile(this.devPath, this.devModules, options, this.compileCallback);
+    const devModules = glob.sync(this.devGlob, {
+      cwd: this.srcPath
+    })
+    let instance = new WatchCompile(this.srcPath, devModules, options, this.compileCallback);
     instance.run();
 
-    //app.compile(options);
+    mvcInstance.compile(options);
   }
 
   clearData() {
@@ -316,7 +308,7 @@ export default class {
   }
 
   getReloadInstance() {
-    let instance = new AutoReload(this.devPath, this.module, () => {
+    let instance = new AutoReload(this.srcPath, this.module, () => {
       this.clearData();
       this.load();
       boots.startup();
@@ -325,7 +317,7 @@ export default class {
   }
 
   autoReload() {
-    if (!this.devPath) {
+    if (!this.srcPath) {
       // 没有需要动态加载的目录
       return;
     }
@@ -381,7 +373,7 @@ export default class {
     this.load();
     this.autoReload();
     if (preload) {
-      app.preload();
+      mvcInstance.preload();
       this.preload();
     }
     this.captureError();

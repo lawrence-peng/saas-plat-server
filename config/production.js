@@ -3,7 +3,14 @@ var app = require('../app').default;
 var path = require('path');
 var fs = require('fs');
 
-var config = JSON.parse(fs.readFileSync(path.normalize(path.join(process.cwd(), 'tenant.json'))));
+var config
+var configfile = path.normalize(path.join(process.cwd(), 'tenant.json'));
+if (fs.existsSync(configfile)) {
+  console.log(configfile)
+  config = JSON.parse(fs.readFileSync(configfile));
+} else {
+  console.warn('无法加载config', configfile)
+}
 
 // load app module
 var instance = new app({

@@ -1,23 +1,31 @@
-require ('babel-polyfill');
+require('babel-polyfill');
 var app = require('../app').default;
 var path = require('path');
 var fs = require('fs');
 
-var config = JSON.parse(fs.readFileSync(path.normalize(path.normalize(__dirname, '/../tenant.json'))));
+var config
+var configfile = path.normalize(path.join(__dirname, '../tenant.json'));
+if (fs.existsSync(configfile)) {
+  console.log(configfile)
+  config = JSON.parse(fs.readFileSync(configfile));
+} else {
+  console.warn('无法加载config', configfile)
+}
 
 // load app module
 var instance = new app({
-  appPath: path.normalize(path.normalize(__dirname, '/../node_modules'),
-  devPath: path.normalize(path.normalize(__dirname,'/../demo'),
+  appPath: path.normalize(path.join(__dirname, '/../demo/app')),
+  srcPath: path.normalize(path.join(__dirname, '/../demo')),
   // 模块配置文件
   modules: config.modules || 'saas-plat-*',
-  devModules: "*"
+  devModules: "*",
   // 模块配置文件
   querydb: config.querydb,
   eventdb: config.eventdb,
+  eventmq: config.eventmq,
   // 服务
-  roles: config.roles || ['web', 'app', 'task', 'workflow'],
-  debugOutput: true
+  roles: config.roles || ['web', 'app', 'task', 'workflow']
+  //debugOutput: true
 });
 instance.compile({
   log: true

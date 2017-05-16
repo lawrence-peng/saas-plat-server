@@ -3,17 +3,15 @@ saasplat server interface
 */
 import path from 'path';
 import mvc from './mvc';
-import cqrs from 'cqrs-fx';
+import cqrs from './cqrs';
 import orm from './orm';
 import logger from './log';
 import conf from './config';
-import co from 'co';
 
 global.saasplat = {};
 saasplat.sep = path.sep;
 saasplat.join = path.join;
 saasplat.dirname = path.dirname;
-saasplat.co = co;
 
 saasplat.getModuleConfig = function (module, name) {
   let config = conf.require(module + '/config/config', true);
@@ -143,10 +141,10 @@ saasplat.repository = class  {
   }
 };
 
-saasplat.aggregate = class extends cqrs.aggregate {
+saasplat.aggregate = class extends cqrs.Aggregate {
   static get(name, id, module, ...other) {
     module = (module || saasplat.module) + '/domain/';
-    return cqrs.aggregate.get(module + name, id, ...other);
+    return cqrs.Aggregate.get(module + name, id, ...other);
   }
 };
 

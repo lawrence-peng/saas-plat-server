@@ -36,4 +36,5 @@ runtime/
 /app
 /thinkjs/app
 
+/demo/**/app
 

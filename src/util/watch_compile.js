@@ -156,7 +156,7 @@ export default class {
       let babel = require('babel-core');
       let data = babel.transform(content, {
         filename: file,
-        presets: [].concat(this.options.presets || ['es2015-loose', 'stage-1', 'stage-3']),
+        presets: [].concat(this.options.presets || ['es2015', 'stage-1', 'stage-3']),
         plugins: [].concat(this.options.plugins || ['transform-runtime']),
         sourceMaps: true,
         sourceFileName: relativePath
