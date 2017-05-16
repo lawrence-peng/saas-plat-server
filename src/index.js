@@ -38,8 +38,8 @@ export default class {
     debug,
     debugOutput
   }) {
-    assert(appPath);
-    assert(querydb);
+    assert(appPath, '应用程序启动路径不能为空');
+
     this.debugOutput = !!debugOutput;
     saasplat.appPath = this.appPath = appPath;
     this.srcPath = srcPath;
@@ -51,24 +51,16 @@ export default class {
     } else {
       saasplat.log('module not found');
     }
-    if (Array.isArray(devModules)) {
+    if (Array.isArray(modules)) {
       this.module = (this.module || []).concat(devModules);
     } else if (typeof modules == 'string') {
-      this.devGlob = modules;
+      this.devGlob = devModules;
     }
-    this.devGlob = devModules;
-    saasplat.eventdb = eventdb;
-    saasplat.querydb = querydb;
     saasplat.debugMode = this.debugMode = debug || false;
-    if (saasplat.debugMode) {
-      saasplat.log('saasplat debug mode');
-    }
-    // 连接查询库
-    orm.db = orm.connect(querydb);
-    cqrs.init({
-      eventmq,
-      eventdb
-    })
+    this.devGlob = devModules;
+    this.querydb = querydb;
+    this.eventdb = eventdb;
+    this.eventmq = eventmq;
   }
 
   _getPath(module, type, prefix = '') {
@@ -199,6 +191,7 @@ export default class {
   }
 
   compile(options) {
+    assert(this.srcPath);
     //this.loadModule();
     this.logDebug(`watch ${this.srcPath} for compile...`);
     let reloadInstance = this.getReloadInstance();
@@ -208,7 +201,7 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    const devModules = glob.sync(this.devGlob, {
+    const devModules =  glob.sync(this.devGlob  , {
       cwd: this.srcPath
     })
     let instance = new WatchCompile(this.srcPath, devModules, options, this.compileCallback);
@@ -369,7 +362,22 @@ export default class {
     });
   }
 
+  init() {
+    assert(this.querydb, '数据库必须配置');
+    if (saasplat.debugMode) {
+      saasplat.log('saasplat debug mode');
+    }
+    // 连接查询库
+    orm.db = orm.connect(this.querydb);
+    // 出事话cqrs
+    cqrs.init({
+      eventmq: this.eventmq,
+      eventdb: this.eventdb
+    })
+  }
+
   run(preload) {
+    this.init();
     this.load();
     this.autoReload();
     if (preload) {

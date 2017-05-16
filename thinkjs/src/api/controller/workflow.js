@@ -1,5 +1,5 @@
 
-export default class extends think.controller.rest {
+export default class extends think.controller.base {
 
- 
+
 }

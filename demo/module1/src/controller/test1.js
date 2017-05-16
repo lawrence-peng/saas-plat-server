@@ -1,6 +1,6 @@
 
 export default class extends saasplat.controller.rest{
-  api1(){
+  getAction(){
     this.success({
       ok: 'hello module1'
     });

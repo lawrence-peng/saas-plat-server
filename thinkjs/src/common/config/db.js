@@ -1,3 +1,4 @@
+'use strict';
 /**
  * db config
  * @type {Object}
@@ -6,17 +7,16 @@ export default {
   type: 'mysql',
   adapter: {
     mysql: {
-      host: 'localhost',
+      host: '127.0.0.1',
       port: '',
-      database: 'saasplat_server1_db',
-      user: 'root',
-      password: '123456',
-      encoding: 'utf8',
-      pool: {
-        max: 5,
-        min: 0,
-        idle: 10000
-      }
+      database: '',
+      user: '',
+      password: '',
+      prefix: 'think_',
+      encoding: 'utf8'
+    },
+    mongo: {
+
     }
   }
 };

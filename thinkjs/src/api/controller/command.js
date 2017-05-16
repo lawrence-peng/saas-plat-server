@@ -1,9 +1,9 @@
 
-export default class extends think.controller.rest {
+export default class extends think.controller.base {
 
-  putAction() {
+  postAction() {
     return this.success({
-       
+
     });
   }
 }

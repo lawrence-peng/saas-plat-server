@@ -7,7 +7,7 @@ export default {
   port: 8100,
   // 开启自定义路由
   route_on: false,
-  default_module: 'core', //默认模块
-  default_controller: 'connection',  //默认的控制器
+  default_module: 'api', //默认模块
+  default_controller: 'index',  //默认的控制器
   default_action: 'get', //默认的 Action
 };

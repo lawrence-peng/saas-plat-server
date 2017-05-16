@@ -106,18 +106,11 @@ saasplat.controller.base = class extends mvc.controller.base {
   }
 };
 
-saasplat.controller.rest = class extends mvc.controller.rest {
-  publish(...messages) {
-    _publish(saasplat.module, messages);
-  }
-
-  query(name, module) {
-    module = (module || saasplat.module) + '/model/';
-    return saasplat.model.get(module + name);
-  }
-
-  config(name, value) {
-    return saasplat.config(name, value, saasplat.module);
+saasplat.controller.rest = class extends saasplat.controller.base {
+  constructor(){
+    super();
+    this._isRest = true;
+    this._method = '';
   }
 };
 

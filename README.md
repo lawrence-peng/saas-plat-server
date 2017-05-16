@@ -67,6 +67,17 @@ saas-plat-server是前后端分离的模式，server只能提供api接口，
   cd mymodule1
 ```
 
+### 基于Thinkjs MVC框架的restful api实现
+
+### 基于CQRS框架的业务逻辑实现
+
+### 工作流
+
+### 定时任务
+
+### Socket.io
+
+
 ## 运行
 
 ```

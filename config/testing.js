@@ -14,18 +14,17 @@ if (fs.existsSync(configfile)) {
 
 // load app module
 var instance = new app({
-  appPath: path.normalize(path.join(__dirname, '/../demo/app')),
+  appPath: path.normalize(path.join(__dirname, '/../demo')),
   srcPath: path.normalize(path.join(__dirname, '/../demo')),
   // 模块配置文件
-  modules: config.modules || 'saas-plat-*',
-  devModules: "*",
+  modules: '*',
   // 模块配置文件
   querydb: config.querydb,
   eventdb: config.eventdb,
   eventmq: config.eventmq,
   // 服务
   roles: config.roles || ['web', 'app', 'task', 'workflow']
-  //debugOutput: true
+  ,debugOutput: true
 });
 instance.compile({
   log: true

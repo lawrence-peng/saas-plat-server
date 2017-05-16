@@ -16,6 +16,9 @@ think.middleware('module_locate_template', (http, options) =>{
   let controller = http.controller;
   let action = http.action;
   let {file_depr, file_ext} = options;
+  if (saasplat.devPath){
+    // todo
+  }
   return appPath + think.sep + app + think.sep + module + think.sep +
     think.dirname.view + think.sep + controller + file_depr + action + file_ext;
 });

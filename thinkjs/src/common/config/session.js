@@ -2,7 +2,7 @@
  * session configs
  */
 export default {
-  name: 'saasserver',
+  name: 'sp-server',
   type: 'file',
   secret: 'TPG3Z*QO',
   timeout: 24 * 3600,
