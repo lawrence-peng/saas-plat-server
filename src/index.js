@@ -51,13 +51,13 @@ export default class {
     } else {
       saasplat.log('module not found');
     }
-    if (Array.isArray(modules)) {
+    if (Array.isArray(devModules)) {
       this.module = (this.module || []).concat(devModules);
     } else if (typeof modules == 'string') {
       this.devGlob = devModules;
     }
     saasplat.debugMode = this.debugMode = debug || false;
-    this.devGlob = devModules;
+    this.devGlob = devModules || '*';
     this.querydb = querydb;
     this.eventdb = eventdb;
     this.eventmq = eventmq;
@@ -109,6 +109,8 @@ export default class {
 
   // 加载扩展的模板
   loadMVC() {
+    think.module = think.module.concat(this.module);
+
     for (let itemType of mvcTypes) {
       this.module.forEach(module => {
         let moduleType = module.replace(/\\/g, '/') + '/' + itemType;
@@ -117,6 +119,7 @@ export default class {
       });
     }
 
+    this.logDebug('load MVC module \n', think.module);
     this.logDebug('load MVC type \n', think.alias());
   }
 
@@ -201,7 +204,7 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    const devModules =  glob.sync(this.devGlob  , {
+    const devModules = glob.sync(this.devGlob, {
       cwd: this.srcPath
     })
     let instance = new WatchCompile(this.srcPath, devModules, options, this.compileCallback);

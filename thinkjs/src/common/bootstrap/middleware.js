@@ -1,8 +1,10 @@
 
 think.middleware('module_route_parse', http =>{
-   http.module = '';
+  // todo 对modoule 根据注册的路由转义
+   //http.module = '';
    //http.controller = 'connection';
    //http.action = 'get';
+   console.log('module_route_parse', http.module, http.controller, http.action)
 });
 
 think.middleware('module_locate_template', (http, options) =>{

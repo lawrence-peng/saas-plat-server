@@ -107,10 +107,11 @@ saasplat.controller.base = class extends mvc.controller.base {
 };
 
 saasplat.controller.rest = class extends saasplat.controller.base {
-  constructor(){
-    super();
+  init(http){
+    super.init(http);
+
     this._isRest = true;
-    this._method = '';
+    this._method = ''; 
   }
 };
 
