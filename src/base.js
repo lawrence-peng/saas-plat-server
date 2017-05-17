@@ -64,15 +64,15 @@ saasplat.error = (...args) => {
     logger.error.apply(logger, args);
 };
 
-// 界面通过元数据配置方式定义
-saasplat.view = {};
-saasplat.view.base = class {
-  constructor() {
-    this.name = '';
-    this.component = null;
-    this.metadata = {};
-  }
-};
+// // 界面通过元数据配置方式定义
+// saasplat.view = {};
+// saasplat.view.base = class {
+//   constructor() {
+//     this.name = '';
+//     this.component = null;
+//     this.metadata = {};
+//   }
+// };
 
 let _publish = (module, ...messages) => {
   if (messages.length <= 0) return;
@@ -111,7 +111,7 @@ saasplat.controller.rest = class extends saasplat.controller.base {
     super.init(http);
 
     this._isRest = true;
-    this._method = ''; 
+    this._method = '';
   }
 };
 
@@ -140,6 +140,14 @@ saasplat.aggregate = class extends cqrs.Aggregate {
     module = (module || saasplat.module) + '/domain/';
     return cqrs.Aggregate.get(module + name, id, ...other);
   }
+};
+
+saasplat.commandhandler = class extends cqrs.CommandHandler{
+
+};
+
+saasplat.eventhandler = class extends cqrs.EventHandler{
+
 };
 
 // 使用Sequelize orm

@@ -67,19 +67,34 @@ saas-plat-server是前后端分离的模式，server只能提供api接口，
   cd mymodule1
 ```
 
-### 基于Thinkjs MVC框架的restful api实现
+### CQRS DDD
 
-### 基于CQRS框架的业务逻辑实现
+业务模块采用DDD领域驱动设计方式开发
+
+相关文件夹
+
+```
+  - domain    // 领域对象或服务，主要实现业务逻辑代码
+  - command   // 命令Handler，调用领域对象或服务执行逻辑
+  - event     // 事件Handler，在发生了某个业务事件后处理保存成供查询的一维表数据、系统集成等其他逻辑
+  - model     // 查询对象，简单的一维表，直接提供查询数据
+```
+
+### ORM
+
+
 
 ### 工作流
 
 ### 定时任务
 
+### Restful Api
+
 ### Socket.io
 
-### 启动运行
+### 配置
 
-### 模块配置
+### 路由
 
 ## 运行
 
