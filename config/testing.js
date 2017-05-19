@@ -6,7 +6,6 @@ var fs = require('fs');
 var config
 var configfile = path.normalize(path.join(__dirname, '../tenant.json'));
 if (fs.existsSync(configfile)) {
-  console.log(configfile)
   config = JSON.parse(fs.readFileSync(configfile));
 } else {
   console.warn('无法加载config', configfile)
@@ -24,7 +23,7 @@ var instance = new app({
   eventmq: config.eventmq,
   // 服务
   roles: config.roles || ['web', 'app', 'task', 'workflow']
-  ,debugOutput: true
+  //,debugOutput: true
 });
 instance.compile({
   log: true

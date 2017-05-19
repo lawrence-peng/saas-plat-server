@@ -1,7 +1,7 @@
 {
   "modules": "saas-plat-*",
   "eventdb": {
-    "url": "mongodb://localhost:27017/cqrs"
+    "url": "mongodb://localhost:27017/testserver1_events"
   },
   "querydb": {
     "username": "root",

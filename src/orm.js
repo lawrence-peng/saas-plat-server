@@ -5,12 +5,12 @@ import Sequelize from 'sequelize'; // orm
 const _data = {
   alias: {},
   export: {},
-  defines:{}
+  defines: {}
 };
 
-const _types = ['model'];
+const _types = ['model', 'migration'];
 const _dirname = {
-  model: 'model'
+  model: 'model' migration: 'migration'
 };
 
 const getFiles = (file) => {
@@ -20,8 +20,8 @@ const getFiles = (file) => {
     for (var fi of files) {
       if (fs.statSync(path.join(file, fi)).isFile())
         dirs.push(fi);
+      }
     }
-  }
   return dirs;
 };
 
@@ -113,49 +113,148 @@ const _require = (name, flag) => {
   return Cls;
 };
 
-const createModel = (model, force = false) => {
+const createModel = async(model, force = false) => {
   if (model && model.sync) {
     // force = drop and create
-    model.sync({
-      force
-    }).then(function () {
-      console.log(`表${model}已创建或更新.`);
-    }).catch(err => {
-      console.error(err);
-    });
+    await model.sync({force});
+    // todo 执行升级脚本
+    console.log(`表${model}已创建或更新.`);
   }
 };
 
-const createModels = (model, force = false) => {
+const createModels = async(model, force = false) => {
   if (model.__esModule) {
     for (let p in model) {
       if (model.hasOwnProperty(p)) {
-        createModel(model[p], force);
+        await createModel(model[p], force);
       }
     }
   } else {
-    createModel(model, force);
+    await createModel(model, force);
   }
 };
 
-const create = (name, force = false) => {
+const create = async(name, force = false) => {
   if (name) {
-    createModels(_require(name), force);
+    await createModels(_require(name), force);
   } else {
     for (var i in _data.alias) {
-      createModels(_require(i), force);
+      if (i.indexOf(`/${_dirname.module}/`)) {
+        await createModels(_require(i), force);
+      }
     }
   }
 };
 
+const up = async(Migration, queryInterface) => {
+  const migration = new Migration(queryInterface);
+  await migration.up();
+}
+
+const down = async(Migration, queryInterface) => {
+  const migration = new Migration(queryInterface);
+  await migration.down();
+}
+
+const migrate = async(revert) => {
+  const queryInterface = db.getQueryInterface();
+  const migrations = _data.alias.filter(item => item.indexOf(`/${_dirname.migration}/`)).sort((a, b) => {
+    const v1 = a.split('/')[2].split('.');
+    const v2 = b.split('/')[2].split('.');
+    for (let i = 0; i < v1.length || i < v2.length; i++) {
+      if (v1[i] < v2[i]) {
+        return -1;
+      } else if (v1[i] > v2[i]) {
+        return 1;
+      }
+    }
+    return 0;
+  });
+  if (revert) {
+    saasplat.module.forEach(module => {
+      const install = await Installs.findOne({
+        where: {
+          name: module
+        }
+      });
+      if (!install) {
+        return;
+      }
+      const v2 = install.split('.');
+      const downs = migrations.filter(item => {
+        const sp = item.split('/');
+        if (sp[0] !== module) {
+          return false;
+        }
+        const v = sp[2].split('.');
+        for (let i = 0; i < v.length; i++) {
+          if (v[i] < v2[i]) {
+            return true;
+          }
+        }
+        return false;
+      });
+      for (var i in downs) {
+        await down(_require(i), queryInterface);
+      }
+      install.version = downs[downs.length - 1].split('/')[2];
+      await install.save();
+    });
+  } else {
+    saasplat.module.forEach(module => {
+      const install = await Installs.findOrCreate({
+        where: {
+          name: module
+        },
+        defaults: {
+          name: module,
+          version: '0.0.0',
+          status: 'install'
+        }
+      }});
+    const v2 = install.split('.');
+    const ups = migrations.filter(item => {
+      const sp = item.split('/');
+      if (sp[0] !== module) {
+        return false;
+      }
+      const v = sp[2].split('.');
+      for (let i = 0; i < v.length; i++) {
+        if (v[i] > v2[i]) {
+          return true;
+        }
+      }
+      return false;
+    });
+    for (var i in ups) {
+      await up(_require(i), queryInterface);
+    }
+    install.version = ups[downs.length - 1].split('/')[2];
+    await install.save();
+  });
+}
+
+const Installs = db.define('installs', {
+  name: {
+    type: TYPE.STRING(255),
+    unique: true
+  },
+  version: TYPE.STRING(255),
+  status: TYPE.ENUM('install', 'uninstall'),
+  updateAt: TYPE.DATE
+}, {tableName: 'installs'});
+
 const connect = (querydb) => {
+  if (db) {
+    return db;
+  }
   let {
     database,
     username,
     password,
     ...options
   } = querydb;
-  return new Sequelize(database, username, password, options)
+  return db = new Sequelize(database, username, password, options);
 };
 const TYPE = Sequelize; // 类型使用Sequelize
 
@@ -163,9 +262,10 @@ let db = null;
 
 export default {
   alias,
-  require: _require,
-  data: _data,
+  require : _require,
+  data : _data,
   create,
+  migrate,
   connect,
   db,
   TYPE

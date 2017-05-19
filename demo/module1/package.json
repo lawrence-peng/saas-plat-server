@@ -1,0 +1,11 @@
+{
+  "name": "module1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "prepare_bak": "saas-plat-server-cli install"
+  },
+  "author": "",
+  "license": "ISC"
+}

@@ -5,9 +5,7 @@ import assert from 'assert';
 import glob from 'glob';
 
 import mvc from './mvc';
-import {
-  app as mvcInstance
-} from './mvc';
+import {app as mvcInstance} from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
@@ -88,7 +86,9 @@ export default class {
       this.moduleConfigs[module] = config;
       subPath = config.main;
     }
-    return `${this.devModules.indexOf(module)>-1?this.devPath:this.appPath}${prefix}${path.sep}${mod}${subPath || 'app'}${path.sep}${type}`;
+    return `${this.devModules.indexOf(module) > -1
+      ? this.devPath
+      : this.appPath}${prefix}${path.sep}${mod}${subPath || 'app'}${path.sep}${type}`;
   }
 
   loadModule() {
@@ -96,12 +96,10 @@ export default class {
       this.logDebug('load modules ' + this.module);
       return;
     }
-    let devModules = this.devPath ? glob.sync(this.devGlob, {
-      cwd: this.devPath
-    }) : [];
-    let appModules = glob.sync(this.glob, {
-      cwd: this.appPath
-    }).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
+    let devModules = this.devPath
+      ? glob.sync(this.devGlob, {cwd: this.devPath})
+      : [];
+    let appModules = glob.sync(this.glob, {cwd: this.appPath}).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
     this.module = appModules.concat(devModules);
     this.logDebug('load modules ' + this.module);
@@ -204,9 +202,7 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    const devModules = glob.sync(this.devGlob, {
-      cwd: this.srcPath
-    })
+    const devModules = glob.sync(this.devGlob, {cwd: this.srcPath})
     let instance = new WatchCompile(this.srcPath, devModules, options, this.compileCallback);
     instance.run();
 
@@ -346,12 +342,22 @@ export default class {
   }
 
   // 创建数据库
-  createModel() {
-    orm.create();
+  async createModel() {
+    // 连接查询库
+    orm.connect(this.querydb);
+    await orm.db.authenticate();
+    await orm.create();
+  }
+
+  async migrate(revert) {
+    // 连接查询库
+    orm.connect(this.querydb);
+    await orm.db.authenticate();
+    return await orm.migrate(revert);
   }
 
   captureError() {
-    process.on('uncaughtException', function (err) {
+    process.on('uncaughtException', function(err) {
       var msg = err.message || err;
       if (msg.toString().indexOf(' EADDRINUSE ') > -1) {
         saasplat.log(err);
@@ -360,7 +366,7 @@ export default class {
         saasplat.error(err);
       }
     });
-    process.on('unhandledRejection', function (err) {
+    process.on('unhandledRejection', function(err) {
       saasplat.error(err);
     });
   }
@@ -371,12 +377,10 @@ export default class {
       saasplat.log('saasplat debug mode');
     }
     // 连接查询库
-    orm.db = orm.connect(this.querydb);
+    orm.connect(this.querydb);
+    //orm.db.authenticate();
     // 出事话cqrs
-    cqrs.init({
-      eventmq: this.eventmq,
-      eventdb: this.eventdb
-    })
+    cqrs.init({eventmq: this.eventmq, eventdb: this.eventdb})
   }
 
   run(preload) {

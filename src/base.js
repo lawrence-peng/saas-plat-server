@@ -154,12 +154,19 @@ saasplat.model.base = class {
   options() {
     return null;
   }
-
 }
+
+saasplat.migration = class{
+  constructor(queryInterface){
+    this.queryInterface = queryInterface;
+  }
+}
+
+
 global.TYPE = saasplat.model.TYPE = orm.TYPE;
 saasplat.model.get = (name, module) => {
   if (!name) {
-    throw new Error(i18n.t('查询对象未找到'))
+    throw new Error(i18n.t('查询对象未找到'));
   }
   if (!module) {
     const mn = name.split('/');
@@ -169,7 +176,7 @@ saasplat.model.get = (name, module) => {
     }
   }
   if (!module) {
-    throw new Error(i18n.t('查询对象未找到，模块未知'))
+    throw new Error(i18n.t('查询对象未找到，模块未知'));
   }
   try {
     const modelName = module + '/model/' + name;
@@ -183,7 +190,7 @@ saasplat.model.get = (name, module) => {
     return orm.data.defines[modelName];
   } catch (e) {
     saasplat.warn(e);
-    throw new Error(i18n.t('查询对象不存在'))
+    throw new Error(i18n.t('查询对象不存在'));
   }
 };
 saasplat.model.define = (module, name, schame, options) => {
@@ -195,10 +202,10 @@ saasplat.model.define = (module, name, schame, options) => {
     }
   }
   if (!module) {
-    throw new Error(i18n.t('查询对象无效，模块未指定'))
+    throw new Error(i18n.t('查询对象无效，模块未指定'));
   }
-  return orm.db.define.apply(orm.db, module + '_' + name, schame, {
+  return orm.db.define.apply(orm.db, [module + '_' + name, schame, {
     ...options,
     tableName: module + '_' + name
-  });
+  }]);
 };
