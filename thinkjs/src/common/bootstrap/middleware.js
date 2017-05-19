@@ -4,7 +4,7 @@ think.middleware('module_route_parse', http =>{
    //http.module = '';
    //http.controller = 'connection';
    //http.action = 'get';
-   console.log('module_route_parse', http.module, http.controller, http.action)
+   //console.log('module_route_parse', http.module, http.controller, http.action)
 });
 
 think.middleware('module_locate_template', (http, options) =>{

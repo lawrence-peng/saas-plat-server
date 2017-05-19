@@ -1,13 +1,14 @@
 import Account from './account';
 
-export default class UserAccount extends Account {
+export default class extends Account {
   contactPhone;
   contactAddress;
 
   static create({
     userName,
     password,
-    ...others}) {
+    ...others
+  }) {
     if (!userName) {
       throw Error('用户名不能为空');
     }
@@ -23,24 +24,24 @@ export default class UserAccount extends Account {
     return userAccount;
   }
 
-  updateAddress(address){
+  updateAddress(address) {
     if (!address) {
       throw Error('地址不能为空');
     }
-    this.raiseEvent('addressUpdated', {
-      userName:this.userName,
+    this.raiseEvent('accountUpdated', {
+      userName: this.userName,
       address
     });
   }
 
-  updateEmail(email){
-      if (!email) {
-        throw Error('email不能为空');
-      }
-      this.raiseEvent('emailUpdated', {
-        userName:this.userName,
-        email
-      });
+  updateEmail(email) {
+    if (!email) {
+      throw Error('email不能为空');
+    }
+    this.raiseEvent('accountUpdated', {
+      userName: this.userName,
+      email
+    });
   }
 
   when({
@@ -66,11 +67,16 @@ export default class UserAccount extends Account {
     this.contactAddress = contactAddress;
   }
 
-  addressUpdated({address}){
+  accountUpdated({
+    address,
+    email
+  }) {
+    if (address !== undefined) {
       this.contactAddress = address;
+    }
+    if (email !== undefined) {
+      this.contactAddress = email;
+    }
   }
 
-  emailUpdated({email}){
-    this.email = email;
-  }
 }

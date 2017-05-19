@@ -4,7 +4,8 @@ import Sequelize from 'sequelize'; // orm
 
 const _data = {
   alias: {},
-  export: {}
+  export: {},
+  defines:{}
 };
 
 const _types = ['model'];

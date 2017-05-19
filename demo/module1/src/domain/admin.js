@@ -1,6 +1,6 @@
 import Account from './Account';
 
-export default class AdminAccount extends Account {
+export default class extends Account {
   isAdmin;
 
   static create({
@@ -18,7 +18,8 @@ export default class AdminAccount extends Account {
     userAccount.raiseEvent('accountCreated', {
       userName,
       password,
-      ...others
+      ...others,
+      isAdmin: true
     });
     return userAccount;
   }

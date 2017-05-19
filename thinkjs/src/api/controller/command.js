@@ -1,9 +1,16 @@
-
 export default class extends think.controller.base {
 
-  postAction() {
-    return this.success({
-
-    });
+  async postAction() {
+    const {
+      name,
+      module,
+      ...data
+    } = this.post();
+    await saasplat.command.publish([{
+      name,
+      module,
+      ...data
+    }]);
+    return this.success();
   }
 }

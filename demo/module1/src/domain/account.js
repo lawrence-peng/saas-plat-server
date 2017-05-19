@@ -1,5 +1,5 @@
 
-export default class Account extends saasplat.aggregate {
+export default class extends saasplat.aggregate {
   userName;
   password;
   displayName;
