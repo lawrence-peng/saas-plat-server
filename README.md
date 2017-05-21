@@ -48,6 +48,7 @@
     - service
     - model
     - domain
+    - migration
     - command
     - event
     - workflow

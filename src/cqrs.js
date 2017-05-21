@@ -2,8 +2,8 @@ import * as cqrs from 'cqrs-fx';
 import * as cqrsCore from 'cqrs-fx/lib/core';
 import * as cqrsEvent from 'cqrs-fx/lib/event';
 import config from 'cqrs-fx/lib/config';
-import Installs from './utils/installs';
-import {getModuleVersion} from './utils/modulever';
+import Installs from './util/installs';
+import {getModuleVersion} from './util/modulever';
 
 const _dirname = {
   migration: 'migration'

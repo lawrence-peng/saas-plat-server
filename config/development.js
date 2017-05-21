@@ -13,9 +13,8 @@ if (fs.existsSync(configfile)) {
 
 // load app module
 var instance = new app({
-  appPath: path.join(process.cwd(), 'node_modules'),
-  srcPath: path.join(process.cwd(), 'src'),
-  devPath: path.join(process.cwd(), 'app'),
+  appPath: path.join(process.cwd(), 'node_modules'), 
+  devPath:  process.cwd() ,
   // 模块配置文件
   modules: config.modules || 'saas-plat-*',
   devModules: "*"

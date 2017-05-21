@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 export var copy = function( src, dst ){
     // 读取目录中的所有文件/目录
     fs.readdir( src, function( err, paths ){

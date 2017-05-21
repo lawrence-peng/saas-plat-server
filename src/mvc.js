@@ -8,7 +8,7 @@ var instance = new thinkjs({
   RUNTIME_PATH: path.dirname(__dirname) + path.sep + 'runtime',
   ROOT_PATH: rootPath,
   RESOURCE_PATH: rootPath + path.sep + 'www',
-  env: 'development'
+  env: 'production' //'development'
 });
 
 // 需要加载类型

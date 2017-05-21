@@ -28,7 +28,6 @@ const configTypes = ['config'];
 export default class {
   constructor({
     appPath,
-    srcPath,
     devPath,
     modules,
     devModules,
@@ -40,10 +39,8 @@ export default class {
     debugOutput
   }) {
     assert(appPath, '应用程序启动路径不能为空');
-
     this.debugOutput = !!debugOutput;
     saasplat.appPath = this.appPath = appPath;
-    this.srcPath = srcPath;
     this.devPath = devPath;
     if (Array.isArray(modules)) {
       this.module = modules;
@@ -196,9 +193,9 @@ export default class {
   }
 
   compile(options) {
-    assert(this.srcPath);
+    assert(this.devPath || this.appPath);
     //this.loadModule();
-    this.logDebug(`watch ${this.srcPath} for compile...`);
+    this.logDebug(`watch ${this.devPath || this.appPath} for compile...`);
     let reloadInstance = this.getReloadInstance();
     this.compileCallback = changedFiles => {
       reloadInstance.clearFilesCache(changedFiles);
@@ -206,8 +203,8 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    const devModules = glob.sync(this.devGlob, {cwd: this.srcPath})
-    let instance = new WatchCompile(this.srcPath, devModules, options, this.compileCallback);
+    const devModules = glob.sync(this.devGlob, {cwd: this.devPath || this.appPath})
+    let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
     instance.run();
 
     mvcInstance.compile(options);
@@ -304,7 +301,7 @@ export default class {
   }
 
   getReloadInstance() {
-    let instance = new AutoReload(this.srcPath, this.module, () => {
+    let instance = new AutoReload(this.devPath || this.appPath, this.module, () => {
       this.clearData();
       this.load();
       boots.startup();
@@ -313,7 +310,7 @@ export default class {
   }
 
   autoReload() {
-    if (!this.srcPath) {
+    if (!this.devPath || this.appPath) {
       // 没有需要动态加载的目录
       return;
     }

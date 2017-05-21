@@ -217,39 +217,5 @@ saasplat.model.get = (name, module) => {
   if (!module) {
     throw new Error(i18n.t('查询对象未找到，模块未知'));
   }
-  try {
-    const modelName = module + '/model/' + name;
-    if (modelName in orm.data.defines) {
-      return orm.data.defines[modelName];
-    }
-    const modelInst = new orm.require(modelName);
-    orm.data.defines[modelName] = saasplat.model.define(module, name, typeof modelInst.schame == 'function'
-      ? modelInst.schame()
-      : {}, typeof modelInst.schame == 'function'
-      ? modelInst.options()
-      : {});
-    return orm.data.defines[modelName];
-  } catch (e) {
-    saasplat.warn(e);
-    throw new Error(i18n.t('查询对象不存在'));
-  }
-};
-saasplat.model.define = (module, name, schame, options) => {
-  if (!module) {
-    const mn = name.split('/');
-    if (mn.length == 2) {
-      module = mn[0];
-      name = mn[1];
-    }
-  }
-  if (!module) {
-    throw new Error(i18n.t('查询对象无效，模块未指定'));
-  }
-  return orm.db.define.apply(orm.db, [
-    module + '_' + name,
-    schame, {
-      ...options,
-      tableName: module + '_' + name
-    }
-  ]);
+  return orm.get(module, name);
 };

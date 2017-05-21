@@ -2,12 +2,13 @@ import path from 'path';
 import fs from 'fs';
 import Sequelize from 'sequelize'; // orm
 import i18n from './i18n';
-import Installs from './utils/installs';
+import Installs from './util/installs';
 
 const _data = {
   alias: {},
   export: {},
-  defines: {}
+  defines: {},
+  db: null
 };
 
 const _dirname = {
@@ -115,12 +116,63 @@ const _require = (name, flag) => {
   return Cls;
 };
 
-const createModel = async(model, force = false) => {
-  if (model && model.sync) {
+const define = (module, name, schame, options) => {
+  if (!module) {
+    const mn = name.split('/');
+    if (mn.length == 2) {
+      module = mn[0];
+      name = mn[1];
+    }
+  }
+  if (!module) {
+    throw new Error(i18n.t('查询对象无效，模块未指定'));
+  }
+  return _data.db.define.apply(_data.db, [
+    module + '_' + name,
+    schame, {
+      ...options,
+      tableName: module + '_' + name
+    }
+  ]);
+};
+
+const get = (module, name) => {
+  if (!name) {
+    throw new Error(i18n.t('查询对象未找到'));
+  }
+  if (!module) {
+    throw new Error(i18n.t('查询对象未找到，模块未知'));
+  }
+  const modelName = module + '/' + _dirname.model + '/' + name;
+  if (modelName in _data.defines) {
+    return _data.defines[modelName];
+  }
+  try {
+    const modelInst = new _require(modelName);
+    _data.defines[modelName] = define(module, name, typeof modelInst.schame == 'function'
+      ? modelInst.schame()
+      : {}, typeof modelInst.schame == 'function'
+      ? modelInst.options()
+      : {});
+    return _data.defines[modelName];
+  } catch (e) {
+    console.warn(e);
+    throw new Error(i18n.t('查询对象不存在'));
+  }
+}
+
+const createModel = async(Model, force = false) => {
+  const modelInst = new Model;
+  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function'
+    ? modelInst.schame()
+    : {}, typeof modelInst.options == 'function'
+    ? modelInst.options()
+    : {});
+  if (model) {
     // force = drop and create
     await model.sync({force});
     // todo 执行升级脚本
-    console.log(`表${model}已创建或更新.`);
+    console.log(`表${model.name}已创建或更新.`);
   }
 };
 
@@ -137,35 +189,35 @@ const createModels = async(model, force = false) => {
 };
 
 const create = async(modules, name, force = false) => {
-  modules.forEach(async(module) => {
+  for (let module of modules) {
     if (name) {
-      await createModels(_require(`${module}/${_dirname.model}/${name}`), force);
+      await createModel(_require(`${module}/${_dirname.model}/${name}`), force);
     } else {
       for (var i in _data.alias) {
-        if (i.indexOf(`${module}/${_dirname.model}/`)) {
-          await createModels(_require(i), force);
+        if (i.indexOf(`${module}/${_dirname.model}/`) > -1) {
+          await createModel(_require(i), force);
         }
       }
     }
-  });
+  }
 };
 
 const backup = async(modules) => {
-  const queryInterface = db.getQueryInterface();
+  const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
-  tableNames.forEach(name => {
-    if (!modules || (name.split('_')[0] in modules)) {
+  for (let name of tableNames) {
+    if (!modules || modules.indexOf(name.split('_')[0]) > -1) {
       if (name.endsWith('__bak')) {
-        queryInterface.dropTable(name);
-        return;
+        await queryInterface.dropTable(name);
+        continue;
       }
-      queryInterface.renameTable(name, name + '__bak');
+      await queryInterface.renameTable(name, name + '__bak');
     }
-  });
+  }
 }
 
 const removeBackup = async(modules) => {
-  const queryInterface = db.getQueryInterface();
+  const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   tableNames.forEach(name => {
     if (!modules || (name.split('_')[0] in modules)) {
@@ -177,23 +229,23 @@ const removeBackup = async(modules) => {
 }
 
 const restore = async(modules, force = false) => {
-  const queryInterface = db.getQueryInterface();
+  const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
-  tableNames.forEach(name => {
-    if (!modules || (name.split('_')[0] in modules)) {
+  for (let name of tableNames) {
+    if (!modules || modules.indexOf(name.split('_')[0])>-1) {
       if (name.endsWith('__bak')) {
         const tblName = name.substr(0, name.length - 5);
         if (tableNames.indexOf(tblName) > -1) {
           if (force) {
-            queryInterface.dropTable(tblName);
+            await queryInterface.dropTable(tblName);
           } else {
             throw new Error(i18n.t('数据表已经存在', tblName));
           }
         }
-        queryInterface.renameTable(name, tblName);
+        await queryInterface.renameTable(name, tblName);
       }
     }
-  });
+  }
 }
 
 const up = async(Migration, queryInterface) => {
@@ -208,7 +260,7 @@ const down = async(Migration, queryInterface) => {
 
 const migrate = async(modules, revert) => {
 
-  const queryInterface = db.getQueryInterface();
+  const queryInterface = _data.db.getQueryInterface();
   const migrations = _data.alias.filter(item => item.indexOf(`${module}/${_dirname.migration}/`)).sort((a, b) => {
     const v1 = a.split('/')[2].split('.');
     const v2 = b.split('/')[2].split('.');
@@ -222,7 +274,7 @@ const migrate = async(modules, revert) => {
     return 0;
   });
   if (revert) {
-    modules.forEach(async(module) => {
+    for (let module of modules) {
       const install = await Installs.find(module);
       if (!install) {
         return;
@@ -246,9 +298,9 @@ const migrate = async(modules, revert) => {
       }
       install.version = downs[downs.length - 1].split('/')[2];
       await Installs.save(install);
-    });
+    }
   } else {
-    modules.forEach(async(module) => {
+    for (let module of modules) {
       const install = await Installs.find(module) || {
         name: module,
         version: '0.0.0',
@@ -273,14 +325,14 @@ const migrate = async(modules, revert) => {
       }
       install.version = ups[downs.length - 1].split('/')[2];
       await Installs.save(install);
-    });
+    }
   }
 
 }
 
 const connect = (querydb) => {
-  if (db) {
-    return db;
+  if (_data.db) {
+    return _data.db;
   }
   let {
     database,
@@ -288,22 +340,22 @@ const connect = (querydb) => {
     password,
     ...options
   } = querydb;
-  return db = new Sequelize(database, username, password, options);
+  _data.db = new Sequelize(database, username, password, options);
+  return _data.db;
 };
 const TYPE = Sequelize; // 类型使用Sequelize
-
-let db = null;
 
 export default {
   alias,
   require : _require,
   data : _data,
+  get,
+  define,
   create,
   backup,
   removeBackup,
   restore,
   migrate,
   connect,
-  db,
   TYPE
 };

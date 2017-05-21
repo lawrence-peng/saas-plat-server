@@ -5,32 +5,33 @@ import * as utils from './utils/file';
 
 describe('应用', function() {
   it('启动后停止服务', function() {
-    const app = new App({
+    const instance = new App({
       appPath: path.normalize(path.join(__dirname, '../demo')),
       srcPath: path.normalize(path.join(__dirname, '../demo')),
       // 模块配置文件
       modules: '*'
     });
 
-    app.loadModule();
+    instance.loadModule();
 
-    expect(app.module).to.not.be.null;
-    expect(app.module.length).to.equal(2)
-    expect(app.module).to.eql(['module1', 'this-module-has-long-name']);
+    expect(instance.module).to.not.be.null;
+    expect(instance.module.length).to.equal(2)
+    expect(instance.module).to.eql(['module1', 'this-module-has-long-name']);
   })
 
   it('安装或升级一个模块', async function() {
     const id = (new Date).getTime();
     utils.copy(path.normalize(path.join(__dirname, 'data/module1')), path.normalize(path.join(__dirname, 'data/' + id + '/module1')));
-    const app = new App({
+    const instance = new App({
       appPath: path.normalize(path.join(__dirname, 'data/' + id)),
       systemdb: path.normalize(path.join(__dirname, 'data/' + id + '/installs.json')),
       modules: ['module1']
     });
-    expect(await app.migration()).to.be.true;
+    instance.compile();
+    expect(await instance.migrate()).to.be.true;
 
     // 再执行也ok
-    expect(await app.migration()).to.be.true;
+    expect(await instance.migrate()).to.be.true;
 
     saasplat.comand.publish({
       type: 'module1/createAccount',
@@ -42,7 +43,7 @@ describe('应用', function() {
 
     utils.copy(path.normalize(path.join(__dirname, 'files/module1_updatefiles')), path.normalize(path.join(__dirname, 'data/' + id + '/module1')));
 
-    expect(await app.migration()).to.be.true;
+    expect(await instance.migrate()).to.be.true;
 
       // 也去迁移代码1.0.2执行设置了默认QQ
       const aaa = saasplat.module.get('module1/account').findOne({
@@ -77,7 +78,7 @@ describe('应用', function() {
       systemdb: path.normalize(path.join(__dirname, 'data/' + id + '/installs.json')),
       modules: ['module2']
     });
-    expect(await app2.migration()).to.be.true;
+    expect(await app2.migrate()).to.be.true;
 
     // 之前添加aaa，bbb用户存在other_account表中
     const other_accounts = saasplat.module.get('module2/other_account').findAll();
