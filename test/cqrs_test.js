@@ -10,12 +10,16 @@ describe('业务', function() {
 
     let eventCount = 0;
 
-    let id = (new Date()).getTime();
+    let id = 'cqrs_test1';
+
+    //utils.deleteFolderRecursive(__dirname + '/data/' + id);
 
     utils.exists(__dirname + '/module1', __dirname + '/data/' + id + '/module1', utils.copy);
 
-    cqrs.fxData.alias['module1/command/account_handler'] = path.normalize(__dirname + '/data/' + id + '/module1/command/account_handler.js');
-    cqrs.fxData.alias['module1/event/account_handler'] = class {
+    saasplat.appPath = path.normalize(__dirname + '/data/' + id);
+
+    cqrs.fxData.alias['module1/command/account_handler'] = path.normalize(__dirname + '/data/' + id + '/module1/src/command/account_handler.js');
+    cqrs.fxData.alias['module1/event/account_handler'] = () => class {
       accountCreated({userName}) {
         eventCount++;
       }
@@ -23,7 +27,7 @@ describe('业务', function() {
         eventCount++;
       }
     };
-    cqrs.fxData.alias['module1/domain/user'] = path.normalize(__dirname + '/data/' + id + '/module1/domain/user.js');
+    cqrs.fxData.alias['module1/domain/user'] = path.normalize(__dirname + '/data/' + id + '/module1/src/domain/user.js');
 
     cqrs.fxData.container = {};
 
@@ -37,14 +41,28 @@ describe('业务', function() {
       },
       snapshot: {
         storage: 'memory'
+      },
+      log: {
+        enable: true
       }
     });
 
+    const listener = ({
+      module,
+      name,
+      type,
+      id
+    }, code, err, handler) => {
+      //    console.log(code, err,handler);
+      expect(0).to.not.be.ok;
+    }
+    cqrs.bus.getCommandDispatcher().addListener(null, null, listener);
+
     await cqrs.bus.publishCommand({
-      name: 'createAccount',
+      name: 'module1/createAccount',
       data: {
         userName: 'aaa',
-        password: '123'
+        password: '123456'
       }
     });
 

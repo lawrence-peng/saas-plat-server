@@ -81,11 +81,31 @@ saasplat.error = (...args) => {
 //   }
 // };
 
+const getModule = (filename) => {
+  if (filename.startsWith(saasplat.appPath)) {
+    return filename.substr(saasplat.appPath.length + 1).split(path.sep)[0]
+  }
+  if (filename.startsWith(saasplat.devPath)) {
+    return filename.substr(saasplat.devPath.length + 1).split(path.sep)[0]
+  }
+  if (!saasplat.appPath && !saasplat.devPath) {
+    saasplat.log(i18n.t('服务器未成功启动'));
+  }
+  return null;
+}
+
+const checkModule = (moduleName) => {
+  if (typeof moduleName !== 'string') {
+    throw new Error(i18n.t('模块不存在'));
+  }
+  return moduleName;
+}
+
 // 控制器使用thinkjs的
 saasplat.controller = {};
 saasplat.controller.base = class extends mvc.controller.base {
   get module() {
-    return this.__filename.split('/')[0];
+    return getModule(this.__filename);
   }
 
   publish(...messages) {
@@ -93,12 +113,12 @@ saasplat.controller.base = class extends mvc.controller.base {
   }
 
   query(name, module) {
-    module = (module || this.module);
+    module = (checkModule(module || this.module));
     return saasplat.model.get(module + name);
   }
 
-  config(name, value) {
-    return saasplat.config(name, value, this.module);
+  config(name, value, module) {
+    return saasplat.config(name, value, checkModule(module || this.module));
   }
 };
 
@@ -111,18 +131,18 @@ saasplat.controller.rest = class extends saasplat.controller.base {
   }
 
   get module() {
-    return this.__filename.split('/')[0];
+    return getModule(this.__filename);
   }
 };
 
 saasplat.logic = {};
 saasplat.logic.base = class extends mvc.logic.base {
   get module() {
-    return this.__filename.split('/')[0];
+    return getModule(this.__filename);
   }
 
   query(name, module) {
-    module = (module || this.module);
+    module = (checkModule(module || this.module));
     return saasplat.model.get(module + name);
   }
 
@@ -144,27 +164,38 @@ global.command = cqrs.command;
 
 saasplat.commandhandler = class extends cqrs.CommandHandler {
   get module() {
-    return this.__filename.split('/')[0];
+    return getModule(this.__filename);
   }
 
   model(name, module) {
-    return saasplat.model.get(name, module || this.module);
+    return saasplat.model.get(name, checkModule(module || this.module));
+  }
+ 
+  getRepository(name, module) {
+    return {
+      get: async({
+        id,
+        ...options
+      }) => {
+        await this.repository.getRepository(name, id, checkModule(module || this.module), options)
+      }
+    };
   }
 };
 
 saasplat.eventhandler = class extends cqrs.EventHandler {
   get module() {
-    return this.__filename.split('/')[0];
+    return getModule(this.__filename);
   }
 
   model(name, module) {
-    return saasplat.model.get(name, module || this.module);
+    return saasplat.model.get(name, checkModule(module || this.module));
   }
 };
 
 saasplat.migration = class Migration {
   get module() {
-    return this.__filename.split('/')[0];
+    return getModule(this.__filename);
   }
 
   get repository() {
@@ -172,11 +203,11 @@ saasplat.migration = class Migration {
   }
 
   model(name, module) {
-    return saasplat.model.get(name, module || this.module);
+    return saasplat.model.get(name, checkModule(module || this.module));
   }
 
   getAggregate(name, module) {
-    return cqrs.Aggregate.get(name, module || this.module);
+    return cqrs.Aggregate.get(name, checkModule(module || this.module));
   }
 }
 
@@ -184,7 +215,7 @@ saasplat.migration = class Migration {
 saasplat.model = {};
 saasplat.model.base = class {
   get module() {
-    return this.__filename.split('/')[0];
+    return getModule(this.__filename);
   }
   schame() {
     return null;
@@ -208,7 +239,7 @@ saasplat.model.get = (name, module) => {
     throw new Error(i18n.t('查询对象未找到'));
   }
   if (!module) {
-    const mn = name.split('/');
+    const mn = name.split(path.sep);
     if (mn.length == 2) {
       module = mn[0];
       name = mn[1];

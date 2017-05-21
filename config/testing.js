@@ -14,7 +14,7 @@ if (fs.existsSync(configfile)) {
 // load app module
 var instance = new app({
   appPath: path.normalize(path.join(__dirname, '/../demo')),
-  srcPath: path.normalize(path.join(__dirname, '/../demo')),
+  devPath: path.normalize(path.join(__dirname, '/../demo')),
   // 模块配置文件
   modules: '*',
   // 模块配置文件

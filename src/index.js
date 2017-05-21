@@ -40,8 +40,8 @@ export default class {
   }) {
     assert(appPath, '应用程序启动路径不能为空');
     this.debugOutput = !!debugOutput;
-    saasplat.appPath = this.appPath = appPath;
-    this.devPath = devPath;
+    saasplat.appPath = this.appPath = path.normalize(appPath);
+    saasplat.devPath = this.devPath = path.normalize(devPath);
     if (Array.isArray(modules)) {
       this.module = modules;
     } else if (typeof modules == 'string') {
@@ -203,7 +203,9 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    const devModules = glob.sync(this.devGlob, {cwd: this.devPath || this.appPath})
+    const devModules = glob.sync(this.devGlob, {
+      cwd: this.devPath || this.appPath
+    })
     let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
     instance.run();
 

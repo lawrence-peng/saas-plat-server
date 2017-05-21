@@ -14,13 +14,14 @@ export var copy = function(src, dst) {
 
     // 判断是否为文件
     if (st.isFile()) {
-      // 创建读取流
-      readable = fs.createReadStream(_src);
-      // 创建写入流
-      writable = fs.createWriteStream(_dst);
-      // 通过管道来传输流
-      readable.pipe(writable // 如果是目录则递归调用自身
-      );
+      // // 创建读取流
+      // readable = fs.createReadStream(_src);
+      // // 创建写入流
+      // writable = fs.createWriteStream(_dst);
+      // // 通过管道来传输流
+      // readable.pipe(writable // 如果是目录则递归调用自身
+      // );
+      fs.writeFileSync(_dst, fs.readFileSync(_src));
     } else if (st.isDirectory()) {
       exists(_src, _dst, copy);
     }
@@ -39,12 +40,42 @@ export var exists = function(src, dst, callback) {
     var sp = dst.split('/');
     var pp = '';
     for (let i = 0; i < sp.length; i++) {
-      pp += path.sep + sp[i];
+      pp += sp[i] + path.sep;
       if (!fs.existsSync(pp)) {
         fs.mkdirSync(pp);
       }
     }
     callback(src, dst);
+  }
+
+};
+
+export const deleteFolderRecursive = function(path) {
+
+  var files = [];
+
+  if (fs.existsSync(path)) {
+
+    files = fs.readdirSync(path);
+
+    files.forEach(function(file, index) {
+
+      var curPath = path + "/" + file;
+
+      if (fs.statSync(curPath).isDirectory()) { // recurse
+
+        deleteFolderRecursive(curPath);
+
+      } else { // delete file
+
+        fs.unlinkSync(curPath);
+
+      }
+
+    });
+
+    fs.rmdirSync(path);
+
   }
 
 };
