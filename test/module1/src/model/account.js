@@ -1,7 +1,7 @@
 export default class extends saasplat.model.base {
   schame() {
     return {
-      name: {
+      id: {
         type: TYPE.STRING(255),
         unique: true
       },

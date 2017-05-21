@@ -15,7 +15,7 @@ export default class extends Account {
     if (!password || password.length < 5) {
       throw Error('密码不能少于5位');
     }
-    const userAccount = new UserAccount;
+    const userAccount = new UserAccount(userName);
     userAccount.raiseEvent('accountCreated', {
       userName,
       password,
@@ -29,7 +29,7 @@ export default class extends Account {
       throw Error('地址不能为空');
     }
     this.raiseEvent('accountUpdated', {
-      userName: this.userName,
+      userName: this.id,
       address
     });
   }
@@ -39,7 +39,7 @@ export default class extends Account {
       throw Error('email不能为空');
     }
     this.raiseEvent('accountUpdated', {
-      userName: this.userName,
+      userName: this.id,
       email
     });
   }
@@ -59,7 +59,7 @@ export default class extends Account {
     email,
     ...contactAddress
   }) {
-    this.userName = userName;
+    //this.userName = userName;
     this.password = password;
     this.displayName = displayName;
     this.email = email;

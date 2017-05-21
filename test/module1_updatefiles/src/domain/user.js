@@ -44,6 +44,14 @@ export default class extends Account {
     });
   }
 
+  updateQQ(QQ) {
+   
+    this.raiseEvent('accountUpdated', {
+      userName: this.userName,
+      QQ
+    });
+  }
+
   when({
     name,
     data

@@ -14,7 +14,7 @@ export default class extends Account {
     if (!password || password.length < 5) {
       throw Error('密码不能少于5位');
     }
-    let userAccount = new AdminAccount;
+    let userAccount = new AdminAccount(userName);
     userAccount.raiseEvent('accountCreated', {
       userName,
       password,
@@ -25,7 +25,7 @@ export default class extends Account {
   }
 
   accountCreated({userName, password, displayName, email}) {
-    this.userName = userName;
+  //  this.userName = userName;
     this.password = password;
     this.displayName = displayName;
     this.email = email;
@@ -33,11 +33,10 @@ export default class extends Account {
   }
 
   doCreateSnapshot() {
-    return {userName: this.userName, password: this.password, displayName: this.displayName, email: this.email};
+    return {  password: this.password, displayName: this.displayName, email: this.email};
   }
 
-  doBuildFromSnapshot({userName, password, displayName, email}) {
-    this.userName = userName;
+  doBuildFromSnapshot({ password, displayName, email}) {
     this.password = password;
     this.displayName = displayName;
     this.email = email;

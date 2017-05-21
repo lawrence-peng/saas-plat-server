@@ -1,5 +1,6 @@
 export default class extends saasplat.eventhandler {
   async accountCreated({
+    userName,
     contactPhone,
     userName,
     password,
@@ -7,8 +8,8 @@ export default class extends saasplat.eventhandler {
     email,
     isAdmin
   }) {
-    await this.get('account').create({
-      name: userName,
+    await this.model('account').create({
+      id: userName,
       displayName,
       email,
       contactPhone,
@@ -24,11 +25,7 @@ export default class extends saasplat.eventhandler {
     address,
     email
   }) {
-    const account = await this.get('account').findOne({
-      where: {
-        name: userName
-      }
-    });
+    const account = await this.model('account').findById(userName);
     if (!account) {
       return;
     }
