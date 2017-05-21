@@ -11,6 +11,8 @@ import orm from './orm';
 import config from './config';
 import boots from './boots';
 
+import i18n from './i18n';
+
 import AutoReload from './util/auto_reload';
 import WatchCompile from './util/watch_compile';
 
@@ -18,8 +20,8 @@ import './base';
 
 //const _modules = ['controller', 'logic', 'service', 'view', 'model', 'event', 'command', 'domain', 'config'];
 const mvcTypes = ['controller', 'logic', 'service']; // model -> orm config -> config
-const ormTypes = ['model'];
-const cqrsTypes = ['command', 'domain', 'event', 'config'];
+const ormTypes = ['model', 'datamigration'];
+const cqrsTypes = ['command', 'domain', 'event', 'config', 'migration'];
 const bootTypes = ['bootstrap'];
 const configTypes = ['config'];
 
@@ -32,6 +34,7 @@ export default class {
     devModules,
     querydb,
     eventdb,
+    systemdb,
     eventmq,
     debug,
     debugOutput
@@ -58,6 +61,7 @@ export default class {
     this.devGlob = devModules || '*';
     this.querydb = querydb;
     this.eventdb = eventdb;
+    saasplat.systemdb = this.systemdb = systemdb;
     this.eventmq = eventmq;
   }
 
@@ -341,19 +345,28 @@ export default class {
     saaplat.log('saasplat preload packages finished', 'PRELOAD', startTime);
   }
 
-  // 创建数据库
-  async createModel() {
+  // 重塑数据库
+  async migrate() {
     // 连接查询库
     orm.connect(this.querydb);
     await orm.db.authenticate();
-    await orm.create();
-  }
-
-  async migrate(revert) {
-    // 连接查询库
-    orm.connect(this.querydb);
-    await orm.db.authenticate();
-    return await orm.migrate(revert);
+    // 备份
+    await orm.backup(this.module);
+    try {
+      // 重建
+      await orm.create(this.module);
+      // 重塑
+      await cqrs.resource(this.module);
+      // 升级
+      await cqrs.migrate(this.module);
+    } catch (err) {
+      saasplat.error(i18n.t('数据迁移失败'), err);
+      await cqrs.backMigrate();
+      await orm.restore(this.module, true);
+      return false;
+    }
+    await orm.removeBackup(this.module);
+    return true;
   }
 
   captureError() {

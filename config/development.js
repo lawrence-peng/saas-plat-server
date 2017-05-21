@@ -22,6 +22,7 @@ var instance = new app({
   // 模块配置文件
   querydb: config.querydb,
   eventdb: config.eventdb,
+  systemdb: config.systemdb,
   // 服务
   roles: config.roles || ['web', 'app', 'task', 'workflow'],
   debug: true

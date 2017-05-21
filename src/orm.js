@@ -1,6 +1,8 @@
 import path from 'path';
 import fs from 'fs';
 import Sequelize from 'sequelize'; // orm
+import i18n from './i18n';
+import Installs from './utils/installs';
 
 const _data = {
   alias: {},
@@ -8,9 +10,9 @@ const _data = {
   defines: {}
 };
 
-const _types = ['model', 'migration'];
 const _dirname = {
-  model: 'model' migration: 'migration'
+  model: 'model',
+  migration: 'datamigration'
 };
 
 const getFiles = (file) => {
@@ -134,17 +136,65 @@ const createModels = async(model, force = false) => {
   }
 };
 
-const create = async(name, force = false) => {
-  if (name) {
-    await createModels(_require(name), force);
-  } else {
-    for (var i in _data.alias) {
-      if (i.indexOf(`/${_dirname.module}/`)) {
-        await createModels(_require(i), force);
+const create = async(modules, name, force = false) => {
+  modules.forEach(async(module) => {
+    if (name) {
+      await createModels(_require(`${module}/${_dirname.model}/${name}`), force);
+    } else {
+      for (var i in _data.alias) {
+        if (i.indexOf(`${module}/${_dirname.model}/`)) {
+          await createModels(_require(i), force);
+        }
       }
     }
-  }
+  });
 };
+
+const backup = async(modules) => {
+  const queryInterface = db.getQueryInterface();
+  const tableNames = await queryInterface.showAllTables();
+  tableNames.forEach(name => {
+    if (!modules || (name.split('_')[0] in modules)) {
+      if (name.endsWith('__bak')) {
+        queryInterface.dropTable(name);
+        return;
+      }
+      queryInterface.renameTable(name, name + '__bak');
+    }
+  });
+}
+
+const removeBackup = async(modules) => {
+  const queryInterface = db.getQueryInterface();
+  const tableNames = await queryInterface.showAllTables();
+  tableNames.forEach(name => {
+    if (!modules || (name.split('_')[0] in modules)) {
+      if (name.endsWith('__bak')) {
+        queryInterface.dropTable(name);
+      }
+    }
+  });
+}
+
+const restore = async(modules, force = false) => {
+  const queryInterface = db.getQueryInterface();
+  const tableNames = await queryInterface.showAllTables();
+  tableNames.forEach(name => {
+    if (!modules || (name.split('_')[0] in modules)) {
+      if (name.endsWith('__bak')) {
+        const tblName = name.substr(0, name.length - 5);
+        if (tableNames.indexOf(tblName) > -1) {
+          if (force) {
+            queryInterface.dropTable(tblName);
+          } else {
+            throw new Error(i18n.t('数据表已经存在', tblName));
+          }
+        }
+        queryInterface.renameTable(name, tblName);
+      }
+    }
+  });
+}
 
 const up = async(Migration, queryInterface) => {
   const migration = new Migration(queryInterface);
@@ -156,9 +206,10 @@ const down = async(Migration, queryInterface) => {
   await migration.down();
 }
 
-const migrate = async(revert) => {
+const migrate = async(modules, revert) => {
+
   const queryInterface = db.getQueryInterface();
-  const migrations = _data.alias.filter(item => item.indexOf(`/${_dirname.migration}/`)).sort((a, b) => {
+  const migrations = _data.alias.filter(item => item.indexOf(`${module}/${_dirname.migration}/`)).sort((a, b) => {
     const v1 = a.split('/')[2].split('.');
     const v2 = b.split('/')[2].split('.');
     for (let i = 0; i < v1.length || i < v2.length; i++) {
@@ -171,16 +222,12 @@ const migrate = async(revert) => {
     return 0;
   });
   if (revert) {
-    saasplat.module.forEach(module => {
-      const install = await Installs.findOne({
-        where: {
-          name: module
-        }
-      });
+    modules.forEach(async(module) => {
+      const install = await Installs.find(module);
       if (!install) {
         return;
       }
-      const v2 = install.split('.');
+      const v2 = install.version.split('.');
       const downs = migrations.filter(item => {
         const sp = item.split('/');
         if (sp[0] !== module) {
@@ -198,51 +245,38 @@ const migrate = async(revert) => {
         await down(_require(i), queryInterface);
       }
       install.version = downs[downs.length - 1].split('/')[2];
-      await install.save();
+      await Installs.save(install);
     });
   } else {
-    saasplat.module.forEach(module => {
-      const install = await Installs.findOrCreate({
-        where: {
-          name: module
-        },
-        defaults: {
-          name: module,
-          version: '0.0.0',
-          status: 'install'
+    modules.forEach(async(module) => {
+      const install = await Installs.find(module) || {
+        name: module,
+        version: '0.0.0',
+        status: 'install'
+      }
+      const v2 = install.version.split('.');
+      const ups = migrations.filter(item => {
+        const sp = item.split('/');
+        if (sp[0] !== module) {
+          return false;
         }
-      }});
-    const v2 = install.split('.');
-    const ups = migrations.filter(item => {
-      const sp = item.split('/');
-      if (sp[0] !== module) {
+        const v = sp[2].split('.');
+        for (let i = 0; i < v.length; i++) {
+          if (v[i] > v2[i]) {
+            return true;
+          }
+        }
         return false;
+      });
+      for (var i in ups) {
+        await up(_require(i), queryInterface);
       }
-      const v = sp[2].split('.');
-      for (let i = 0; i < v.length; i++) {
-        if (v[i] > v2[i]) {
-          return true;
-        }
-      }
-      return false;
+      install.version = ups[downs.length - 1].split('/')[2];
+      await Installs.save(install);
     });
-    for (var i in ups) {
-      await up(_require(i), queryInterface);
-    }
-    install.version = ups[downs.length - 1].split('/')[2];
-    await install.save();
-  });
-}
+  }
 
-const Installs = db.define('installs', {
-  name: {
-    type: TYPE.STRING(255),
-    unique: true
-  },
-  version: TYPE.STRING(255),
-  status: TYPE.ENUM('install', 'uninstall'),
-  updateAt: TYPE.DATE
-}, {tableName: 'installs'});
+}
 
 const connect = (querydb) => {
   if (db) {
@@ -265,6 +299,9 @@ export default {
   require : _require,
   data : _data,
   create,
+  backup,
+  removeBackup,
+  restore,
   migrate,
   connect,
   db,

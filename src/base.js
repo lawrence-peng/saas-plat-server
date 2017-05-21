@@ -17,21 +17,24 @@ saasplat.sep = path.sep;
 saasplat.join = path.join;
 saasplat.dirname = path.dirname;
 
-saasplat.getModuleConfig = function (module, name) {
+saasplat.getModuleConfig = function(module, name) {
   let config = conf.require(module + '/config/config', true);
-  if (!name) return config;
-  if (config && config[name]) return config[name];
+  if (!name)
+    return config;
+  if (config && config[name])
+    return config[name];
   config = conf.require(module + '/config/' + name, true);
   return config;
 };
-saasplat.setModuleConfig = function (module, name, value) {
+saasplat.setModuleConfig = function(module, name, value) {
   console.warn('setModuleConfig not support!');
 };
-saasplat.config = function (name, value, module) {
+saasplat.config = function(name, value, module) {
   if (value == undefined) {
     if (module) {
       let val = saasplat.getModuleConfig(module, name);
-      if (val) return val;
+      if (val)
+        return val;
       return mvc.config(name);
     } else {
       return mvc.config(name);
@@ -50,23 +53,23 @@ saasplat.logEnable = true;
 saasplat.log = (...args) => {
   if (saasplat.logEnable)
     logger.info.apply(logger, args);
-};
+  };
 saasplat.warn = (...args) => {
   if (saasplat.logEnable)
     logger.warn.apply(logger, args);
-};
+  };
 saasplat.debug = (...args) => {
   if (saasplat.logEnable)
     logger.debug.apply(logger, args);
-};
+  };
 saasplat.info = (...args) => {
   if (saasplat.logEnable)
     logger.info.apply(logger, args);
-};
+  };
 saasplat.error = (...args) => {
   if (saasplat.logEnable)
     logger.error.apply(logger, args);
-};
+  };
 
 // // 界面通过元数据配置方式定义
 // saasplat.view = {};
@@ -78,23 +81,24 @@ saasplat.error = (...args) => {
 //   }
 // };
 
-saasplat.command = {};
-saasplat.command.publish = cqrs.bus.publishCommand;
-
 // 控制器使用thinkjs的
 saasplat.controller = {};
 saasplat.controller.base = class extends mvc.controller.base {
+  get module() {
+    return this.__filename.split('/')[0];
+  }
+
   publish(...messages) {
     cqrs.bus.publishCommand(messages);
   }
 
   query(name, module) {
-    module = (module || saasplat.module) + '/model/';
+    module = (module || this.module);
     return saasplat.model.get(module + name);
   }
 
   config(name, value) {
-    return saasplat.config(name, value, saasplat.module);
+    return saasplat.config(name, value, this.module);
   }
 };
 
@@ -105,49 +109,83 @@ saasplat.controller.rest = class extends saasplat.controller.base {
     this._isRest = true;
     this._method = '';
   }
+
+  get module() {
+    return this.__filename.split('/')[0];
+  }
 };
 
 saasplat.logic = {};
 saasplat.logic.base = class extends mvc.logic.base {
+  get module() {
+    return this.__filename.split('/')[0];
+  }
+
   query(name, module) {
-    module = (module || saasplat.module) + '/model/';
+    module = (module || this.module);
     return saasplat.model.get(module + name);
   }
 
   config(name, value) {
-    return saasplat.config(name, value, saasplat.module);
+    return saasplat.config(name, value, this.module);
   }
 };
 
 // 领域层使用cqrs
-saasplat.repository = class {
-  static get(name, id, module, ...other) {
-    module = (module || saasplat.module) + '/domain/';
-    return cqrs.repository.get(module + name, id, ...other);
-  }
-};
 
-saasplat.aggregate = class extends cqrs.Aggregate {
-  static get(name, id, module, ...other) {
-    module = (module || saasplat.module) + '/domain/';
-    return cqrs.Aggregate.get(module + name, id, ...other);
-  }
-};
+saasplat.command = {};
+saasplat.command.publish = cqrs.bus.publishCommand;
+
+saasplat.repository = cqrs.repository;
+saasplat.aggregate = class extends cqrs.Aggregate {};
+
+global.event = cqrs.event;
+global.command = cqrs.command;
 
 saasplat.commandhandler = class extends cqrs.CommandHandler {
+  get module() {
+    return this.__filename.split('/')[0];
+  }
 
+  model(name, module) {
+    return saasplat.model.get(name, module || this.module);
+  }
 };
 
 saasplat.eventhandler = class extends cqrs.EventHandler {
-  get(name, module) {
-    module = (module || saasplat.module);
-    return saasplat.model.get(name, module);
+  get module() {
+    return this.__filename.split('/')[0];
+  }
+
+  model(name, module) {
+    return saasplat.model.get(name, module || this.module);
   }
 };
+
+saasplat.migration = class Migration {
+  get module() {
+    return this.__filename.split('/')[0];
+  }
+
+  get repository() {
+    return cqrs.getRepository();
+  }
+
+  model(name, module) {
+    return saasplat.model.get(name, module || this.module);
+  }
+
+  getAggregate(name, module) {
+    return cqrs.Aggregate.get(name, module || this.module);
+  }
+}
 
 // 使用Sequelize orm
 saasplat.model = {};
 saasplat.model.base = class {
+  get module() {
+    return this.__filename.split('/')[0];
+  }
   schame() {
     return null;
   }
@@ -156,12 +194,13 @@ saasplat.model.base = class {
   }
 }
 
-saasplat.migration = class{
-  constructor(queryInterface){
+saasplat.model.migration = class {
+  constructor(queryInterface) {
     this.queryInterface = queryInterface;
   }
+  up() {}
+  down() {}
 }
-
 
 global.TYPE = saasplat.model.TYPE = orm.TYPE;
 saasplat.model.get = (name, module) => {
@@ -184,9 +223,11 @@ saasplat.model.get = (name, module) => {
       return orm.data.defines[modelName];
     }
     const modelInst = new orm.require(modelName);
-    orm.data.defines[modelName] = saasplat.model.define(module, name,
-      typeof modelInst.schame == 'function' ? modelInst.schame() : {},
-      typeof modelInst.schame == 'function' ? modelInst.options() : {});
+    orm.data.defines[modelName] = saasplat.model.define(module, name, typeof modelInst.schame == 'function'
+      ? modelInst.schame()
+      : {}, typeof modelInst.schame == 'function'
+      ? modelInst.options()
+      : {});
     return orm.data.defines[modelName];
   } catch (e) {
     saasplat.warn(e);
@@ -204,8 +245,11 @@ saasplat.model.define = (module, name, schame, options) => {
   if (!module) {
     throw new Error(i18n.t('查询对象无效，模块未指定'));
   }
-  return orm.db.define.apply(orm.db, [module + '_' + name, schame, {
-    ...options,
-    tableName: module + '_' + name
-  }]);
+  return orm.db.define.apply(orm.db, [
+    module + '_' + name,
+    schame, {
+      ...options,
+      tableName: module + '_' + name
+    }
+  ]);
 };

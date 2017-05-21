@@ -14,16 +14,40 @@ if (fs.existsSync(configfile)) {
 
 var args = process.args.splice(2);
 
-// load app module
-var instance = new app({
-  appPath: path.join(process.cwd(), 'node_modules'),
-  // 模块配置文件
-  modules: args.length > 1
-    ? args
-    : args.length == 1
-      ? args[0]
-      : config.modules,
-  // 模块配置文件
-  querydb: config.querydb
-});
-instance.migrate();
+var run = function(cfg) {
+  var modules = [];
+  for(var i=0;i<args.length;i++){
+    if (args[i].sbustr(0,2) != '--'){
+      modules.push(args[i]);
+    }
+  }
+  var instance = new app({
+    appPath: path.join(process.cwd(), 'node_modules'),
+    // 模块配置文件
+    modules: modules.length > 1
+      ? modules
+      : modules.length == 1
+        ? modules[0]
+        : [],
+    // 模块配置文件
+    querydb: cfg.querydb,
+    eventdb: cfg.eventdb,
+    systemdb: cfg.systemdb
+  });
+  instance.migrate();
+}
+
+if (args.indexOf('--saasplat')) {
+  // 启用了平台部署模式
+  if (config && !config.id) {
+    console.warn('config文件无效');
+  } else {
+    fetch('http://internal.saas-plat.com/tenant?id=' + config.id).then(rep => rep.json()).then(json => {
+      run(json);
+    });
+  }
+} else {
+  if (config) {
+    run(config);
+  }
+}

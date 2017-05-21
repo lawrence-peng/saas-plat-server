@@ -78,10 +78,27 @@ saas-plat-server是前后端分离的模式，server只能提供api接口，
   - command   // 命令Handler，调用领域对象或服务执行逻辑
   - event     // 事件Handler，在发生了某个业务事件后处理保存成供查询的一维表数据、系统集成等其他逻辑
   - model     // 查询对象，简单的一维表，直接提供查询数据
+  - migration // 业务迁移逻辑
 ```
+
+**业务迁移**
+
+业务迁移适用于调整业务逻辑或者错误产生的数据错误
 
 ### ORM
 
+查询对象采用ORM方式操作
+
+相关文件夹
+
+```
+  - model
+```
+
+**数据迁移**
+
+数据迁移并不需要编写创建表脚本或升级脚本，也不需要写错误数据修改脚本，
+系统会计算相关模块，采用重塑业务事件方式，重建所有相关数据
 
 
 ### 工作流
@@ -104,6 +121,6 @@ saas-plat-server是前后端分离的模式，server只能提供api接口，
 
 ## 授权
 
-saas-plat-server和saas-plat-cli工具遵循Apache License许可
+saas-plat-server和saas-plat-cli工具遵循GPL许可
 
-**部分由saas-plat.com开发者开发的业务单元可能采用非商业授权许可**
+**部分由saas-plat.com开发者开发的业务模块可能采用非商业授权许可**

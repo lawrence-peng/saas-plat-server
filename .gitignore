@@ -38,3 +38,5 @@ runtime/
 
 /demo/**/app
 
+/test/data
+/test/**/app
