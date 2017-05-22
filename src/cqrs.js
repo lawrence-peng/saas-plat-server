@@ -1,9 +1,14 @@
 import * as cqrs from 'cqrs-fx';
 import * as cqrsCore from 'cqrs-fx/lib/core';
 import * as cqrsEvent from 'cqrs-fx/lib/event';
+import * as cqrsBus from 'cqrs-fx/lib/bus';
 import config from 'cqrs-fx/lib/config';
 import Installs from './util/installs';
-import {getModuleVersion} from './util/modulever';
+import logger from './log';
+
+import {
+  getModuleVersion
+} from './util/modulever';
 
 const _dirname = {
   migration: 'migration'
@@ -40,9 +45,65 @@ const init = (cfg) => {
   });
 }
 
-const resource = async(modules) => {
+// 回溯业务事件，可以指定业务日期
+const resource = async(modules, gteTimestamp, progressCallback) => {
   saasplat.resourcing = true;
-  try {} finally {
+  let total, current, success, failed;
+  try {
+    const eventDispatcher = cqrsBus.getEventDispatcher();
+    const listener = ({
+      module,
+      name,
+      type,
+      id
+    }, code, error) => {
+      if (!code) {
+        current++;
+        logger.info(i18n.t('开始重塑事件'), module + '/' + name, id);
+      } else if (code == 'ok') {
+        success++;
+        logger.info(i18n.t('重塑事件完成'), module + '/' + name, id);
+      } else {
+        failed++;
+        logger.info(i18n.t('重塑事件失败'), module + '/' + name, id, code, error);
+      }
+      if (typeof progressCallback == 'function') {
+        progressCallback({
+          module,
+          name,
+          type,
+          id,
+          total,
+          current,
+          success,
+          failed
+        });
+      }
+    }
+    eventDispatcher.addListener(listener, listener, listener);
+    const eventStorage = cqrsEvent.getStorage().eventStorage;
+    total = await eventStorage.count();
+    const cursor = await eventStorage.visit({
+      module: {
+        $in: modules
+      },
+      timestamp: gteTimestamp && {
+        $gte: gteTimestamp
+      }
+    }, (item) => {
+      await eventDispatcher.dispatch({
+        id: item._id,
+        data: item.data,
+        name: item.name,
+        module: item.module,
+        sourceId: item.source_id,
+        sourceAlias: item.source_type,
+        branch: item.branch,
+        version: item.version,
+        timestamp: item.timestamp
+      });
+    });
+  } finally {
     delete saasplat.resourcing;
   }
 }
@@ -63,7 +124,9 @@ const migrate = async(modules, revert) => {
   const store = cqrsEvent.getStorage('mongo');
   const db = await store.connect();
   try {
-    const version = await db.collection(store.collection).findOne({order: 'version DESC'});
+    const version = await db.collection(store.collection).findOne({
+      order: 'version DESC'
+    });
     if (version) {
       revertVersion = version.version;
     } else {
@@ -156,7 +219,9 @@ const backMigrate = async() => {
       version: {
         $gt: revertVersion
       }
-    })).destroy({force: true});
+    })).destroy({
+      force: true
+    });
   } finally {
     db.close();
   }
@@ -166,8 +231,8 @@ const backMigrate = async() => {
 
 export default {
   init,
-  fxData : cqrsCore.fxData,
-  alias : cqrsCore.alias,
+  fxData: cqrsCore.fxData,
+  alias: cqrsCore.alias,
   resource,
   migrate,
   backMigrate,
