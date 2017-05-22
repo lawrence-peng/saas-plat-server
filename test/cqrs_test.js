@@ -20,9 +20,12 @@ describe('业务', function() {
 
     cqrs.fxData.alias['module1/command/account_handler'] = path.normalize(__dirname + '/data/' + id + '/module1/src/command/account_handler.js');
     cqrs.fxData.alias['module1/event/account_handler'] = () => class {
+      @cqrs.event('module1')
       accountCreated({userName}) {
+      //  console.log('userName',userName)
         eventCount++;
       }
+      @cqrs.event('module1')
       accountUpdated({userName}) {
         eventCount++;
       }
@@ -69,7 +72,7 @@ describe('业务', function() {
     expect(eventCount).to.be.equal(1);
 
     await cqrs.bus.publishCommand({
-      type: 'updateAddress',
+      name: 'module1/updateAddress',
       data: {
         userName: 'aaa',
         address: 'this is address1'

@@ -7,7 +7,7 @@ export default class extends saasplat.commandhandler {
     });
   }
 
-  async deleteAccount({id}) {
+  async deleteAccount({userName}) {
     await this.repository.use(async() => {
       const userAccount = await this.getRepository('user').get(id);
       userAccount.delete();
@@ -15,10 +15,10 @@ export default class extends saasplat.commandhandler {
     });
   }
 
-  async updateAddress({id, address}) {
+  async updateAddress({userName, address}) {
     await this.repository.use(async() => {
-      const userAccount = await this.getRepository('user').get(id);
-      userAccount.updateAddress();
+      const userAccount = await this.getRepository('user').get(userName);
+      userAccount.updateAddress(address);
       await this.repository.commit();
     });
   }
