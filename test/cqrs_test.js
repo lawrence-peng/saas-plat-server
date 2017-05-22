@@ -2,11 +2,12 @@ import {expect} from 'chai';
 import path from 'path';
 import cqrs from '../src/cqrs';
 import config from 'cqrs-fx/lib/config';
+import {getStorage} from 'cqrs-fx/lib/event';
 import '../src/base';
 import * as utils from './utils/file';
 
 describe('业务', function() {
-  it('迁移', async function() {
+  it('可以重溯后迁移业务数据', async function() {
 
     let eventCount = 0;
 
@@ -22,7 +23,7 @@ describe('业务', function() {
     cqrs.fxData.alias['module1/event/account_handler'] = () => class {
       @cqrs.event('module1')
       accountCreated({userName}) {
-      //  console.log('userName',userName)
+        //  console.log('userName',userName)
         eventCount++;
       }
       @cqrs.event('module1')
@@ -81,6 +82,9 @@ describe('业务', function() {
 
     expect(eventCount).to.be.equal(2);
 
+ 
+
+    // 重溯
     eventCount = 0;
     await cqrs.resource(['module1']);
     expect(eventCount).to.be.equal(2);
