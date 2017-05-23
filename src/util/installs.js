@@ -19,21 +19,65 @@ function saveItems(items) {
 }
 
 export default {
-  find : (name) => {
+  find: (name, status, version) => {
     assert(name);
     if (!this.items) {
       this.items = this.loadItems();
     }
-    return {name, version: this.items[name]};
+    return items.filter(item => item.name == name &&
+      (status == undefined || item.status == status) &&
+      (version == undefined || item.version == version)
+    );
   },
 
-  save : ({name, version}) => {
-    assert(name);
-    assert(version);
+  has: (status) => {
+    return !!items.find(item => item.status == status);
+  },
+
+  commit: () => {
     if (!this.items) {
       this.items = this.loadItems();
     }
-    this.items[name] = version;
+    this.items.forEach(item => {
+      if (item.status == 'waitCommit') {
+        item.status = 'install';
+      }
+    });
+    this.saveItems(this.items);
+  },
+
+  rollback: () => {
+    if (!this.items) {
+      this.items = this.loadItems();
+    }
+    this.items.filter(item => item.status == 'waitCommit').forEach(item=>{
+      const exists = this.items.find(it => it.name == item.name && it.version == item.version);
+      if (exists) {
+        this.items.splice(this.items.indexOf(exists), 1);
+      }
+    });
+    this.saveItems(this.items);
+  },
+
+  save: (...items) => {
+    if (!this.items) {
+      this.items = this.loadItems();
+    }
+    items.filter(item => item.status == 'uninstall').forEach(item => {
+      const exists = this.items.find(it => it.name == item.name && it.version == item.version);
+      if (exists) {
+        this.items.splice(this.items.indexOf(exists), 1);
+      }
+    });
+    items.filter(item => item.status != 'uninstall').forEach(item => {
+      const exists = this.items.find(it => it.name == item.name && it.version == item.version);
+      if (exists) {
+        exists.status = item.status;
+        exists.installDate = item.installDate;
+      } else {
+        this.items.push(item);
+      }
+    });
     this.saveItems(this.items);
   }
 }

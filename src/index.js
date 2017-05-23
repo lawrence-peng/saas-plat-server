@@ -5,13 +5,17 @@ import assert from 'assert';
 import glob from 'glob';
 
 import mvc from './mvc';
-import {app as mvcInstance} from './mvc';
+import {
+  app as mvcInstance
+} from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
 
 import i18n from './i18n';
+
+import Installs from './util/installs';
 
 import AutoReload from './util/auto_reload';
 import WatchCompile from './util/watch_compile';
@@ -97,10 +101,13 @@ export default class {
       this.logDebug('load modules ' + this.module);
       return;
     }
-    let devModules = this.devPath
-      ? glob.sync(this.devGlob, {cwd: this.devPath})
-      : [];
-    let appModules = glob.sync(this.glob, {cwd: this.appPath}).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
+    let devModules = this.devPath ?
+      glob.sync(this.devGlob, {
+        cwd: this.devPath
+      }) : [];
+    let appModules = glob.sync(this.glob, {
+      cwd: this.appPath
+    }).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
     this.module = appModules.concat(devModules);
     this.logDebug('load modules ' + this.module);
@@ -344,32 +351,80 @@ export default class {
     saaplat.log('saasplat preload packages finished', 'PRELOAD', startTime);
   }
 
-  // 重塑数据库
-  async migrate() {
+  // 已有模块升级后需要数据迁移
+  async migrate(rollbackWaitCommit = false) {
     // 连接查询库
-    orm.connect(this.querydb);
-    await orm.db.authenticate();
-    // 备份
-    await orm.backup(this.module);
+    await orm.connect(this.querydb);
+    const versions = this.getVersions();
+
     try {
+      if (rollbackWaitCommit && await Installs.has('waitCommit')) {
+        await cqrs.migrate(this.module, true);
+        await orm.migrate(this.module, true);
+        await Installs.save(this.module.map(name => ({
+          name,
+          version: versions[name],
+          status: 'uninstall'
+        })));
+      }
+    } catch (err) {
+      return false;
+    }
+
+    const notComitteds = await Installs.has('waitCommit');
+    if (notComitteds) {
+      throw new Error(i18n.t('还有上次未安装成功的模块需要回滚'));
+    }
+
+    let revertVersion;
+    try {
+      // 记录
+      await Installs.save(this.module.map(name => ({
+        name,
+        version: versions[name],
+        installDate: new Date(),
+        status: 'waitCommit'
+      })));
+      // 升级数据
+      await orm.migrate(this.module);
+      // 升级业务
+      revertVersion = await cqrs.revertVersion();
+      await cqrs.migrate(this.module);
+      // 提交
+      await Installs.comit();
+    } catch (err) {
+      saasplat.error(i18n.t('数据迁移失败'), err);
+      if (revertVersion) {
+        await cqrs.backMigrate(revertVersion);
+      }
+      // 降级数据
+      await orm.migrate(this.module, true);
+      await Installs.rollback();
+      return false;
+    }
+    return true;
+  }
+
+  // 新安装模块需要业务回溯
+  async resource() {
+    // 连接查询库
+    await orm.connect(this.querydb);
+    try {
+      // 之前可能已经安装过，但是卸载后会保留数据表，需要删除
+      await orm.drop(this.module);
       // 重建
       await orm.create(this.module);
       // 重塑
       await cqrs.resource(this.module);
-      // 升级
-      await cqrs.migrate(this.module);
     } catch (err) {
-      saasplat.error(i18n.t('数据迁移失败'), err);
-      await cqrs.backMigrate();
-      await orm.restore(this.module, true);
+      saasplat.error(i18n.t('事件回溯失败'), err);
       return false;
     }
-    await orm.removeBackup(this.module);
     return true;
   }
 
   captureError() {
-    process.on('uncaughtException', function(err) {
+    process.on('uncaughtException', function (err) {
       var msg = err.message || err;
       if (msg.toString().indexOf(' EADDRINUSE ') > -1) {
         saasplat.log(err);
@@ -378,25 +433,28 @@ export default class {
         saasplat.error(err);
       }
     });
-    process.on('unhandledRejection', function(err) {
+    process.on('unhandledRejection', function (err) {
       saasplat.error(err);
     });
   }
 
-  init() {
+  async init() {
     assert(this.querydb, '数据库必须配置');
     if (saasplat.debugMode) {
       saasplat.log('saasplat debug mode');
     }
     // 连接查询库
-    orm.connect(this.querydb);
+    await orm.connect(this.querydb);
     //orm.db.authenticate();
     // 出事话cqrs
-    cqrs.init({eventmq: this.eventmq, eventdb: this.eventdb})
+    cqrs.init({
+      eventmq: this.eventmq,
+      eventdb: this.eventdb
+    })
   }
 
-  run(preload) {
-    this.init();
+  async run(preload) {
+    await this.init();
     this.load();
     this.autoReload();
     if (preload) {

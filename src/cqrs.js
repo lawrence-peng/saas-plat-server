@@ -144,7 +144,8 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
         $gte: gteTimestamp
       }
     }
-    const cursor = await eventStorage.visit(spec, async(item) => {
+    // 按时间顺序回溯
+    const cursor = await eventStorage.visit(spec, {timestamp:1}, async(item) => {
       current++;
       await eventDispatcher.dispatch({
         type: 'event',

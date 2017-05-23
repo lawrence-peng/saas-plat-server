@@ -23,8 +23,8 @@ const getFiles = (file) => {
     for (var fi of files) {
       if (fs.statSync(path.join(file, fi)).isFile())
         dirs.push(fi);
-      }
     }
+  }
   return dirs;
 };
 
@@ -149,11 +149,9 @@ const get = (module, name) => {
   }
   try {
     const modelInst = new _require(modelName);
-    _data.defines[modelName] = define(module, name, typeof modelInst.schame == 'function'
-      ? modelInst.schame()
-      : {}, typeof modelInst.schame == 'function'
-      ? modelInst.options()
-      : {});
+    _data.defines[modelName] = define(module, name, typeof modelInst.schame == 'function' ?
+      modelInst.schame() : {}, typeof modelInst.schame == 'function' ?
+      modelInst.options() : {});
     return _data.defines[modelName];
   } catch (e) {
     console.warn(e);
@@ -163,14 +161,14 @@ const get = (module, name) => {
 
 const createModel = async(Model, force = false) => {
   const modelInst = new Model;
-  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function'
-    ? modelInst.schame()
-    : {}, typeof modelInst.options == 'function'
-    ? modelInst.options()
-    : {});
+  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function' ?
+    modelInst.schame() : {}, typeof modelInst.options == 'function' ?
+    modelInst.options() : {});
   if (model) {
     // force = drop and create
-    await model.sync({force});
+    await model.sync({
+      force
+    });
     // todo 执行升级脚本
     console.log(`表${model.name}已创建或更新.`);
   }
@@ -202,6 +200,16 @@ const create = async(modules, name, force = false) => {
   }
 };
 
+const drop = async(modules) => {
+  const queryInterface = _data.db.getQueryInterface();
+  const tableNames = await queryInterface.showAllTables();
+  for (let name of tableNames) {
+    if (!modules || modules.indexOf(name.split('_')[0]) > -1) {
+      await queryInterface.dropTable(name);
+    }
+  }
+}
+
 const backup = async(modules) => {
   const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
@@ -232,7 +240,7 @@ const restore = async(modules, force = false) => {
   const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   for (let name of tableNames) {
-    if (!modules || modules.indexOf(name.split('_')[0])>-1) {
+    if (!modules || modules.indexOf(name.split('_')[0]) > -1) {
       if (name.endsWith('__bak')) {
         const tblName = name.substr(0, name.length - 5);
         if (tableNames.indexOf(tblName) > -1) {
@@ -258,8 +266,9 @@ const down = async(Migration, queryInterface) => {
   await migration.down();
 }
 
-const migrate = async(modules, revert) => {
 
+// 升级或者降级
+const migrate = async(modules, revert = false) => {
   const queryInterface = _data.db.getQueryInterface();
   const migrations = _data.alias.filter(item => item.indexOf(`${module}/${_dirname.migration}/`)).sort((a, b) => {
     const v1 = a.split('/')[2].split('.');
@@ -274,12 +283,13 @@ const migrate = async(modules, revert) => {
     return 0;
   });
   if (revert) {
+    const uninstalls = [];
     for (let module of modules) {
-      const install = await Installs.find(module);
-      if (!install) {
+      const last = await Installs.find(module, 'waitCommit');
+      if (!last) {
         return;
       }
-      const v2 = install.version.split('.');
+      const downToVersion = last.version.split('.');
       const downs = migrations.filter(item => {
         const sp = item.split('/');
         if (sp[0] !== module) {
@@ -287,26 +297,24 @@ const migrate = async(modules, revert) => {
         }
         const v = sp[2].split('.');
         for (let i = 0; i < v.length; i++) {
-          if (v[i] < v2[i]) {
+          if (v[i] < downToVersion[i]) {
             return true;
           }
         }
         return false;
       });
-      for (var i in downs) {
+      for (let i of downs) {
         await down(_require(i), queryInterface);
       }
-      install.version = downs[downs.length - 1].split('/')[2];
-      await Installs.save(install);
     }
   } else {
+    const installs = [];
     for (let module of modules) {
-      const install = await Installs.find(module) || {
+      const last = await Installs.find(module) || {
         name: module,
-        version: '0.0.0',
-        status: 'install'
-      }
-      const v2 = install.version.split('.');
+        version: '0.0.0'
+      };
+      const lastVersion = last.version.split('.');
       const ups = migrations.filter(item => {
         const sp = item.split('/');
         if (sp[0] !== module) {
@@ -314,23 +322,20 @@ const migrate = async(modules, revert) => {
         }
         const v = sp[2].split('.');
         for (let i = 0; i < v.length; i++) {
-          if (v[i] > v2[i]) {
+          if (v[i] > lastVersion[i]) {
             return true;
           }
         }
         return false;
       });
-      for (var i in ups) {
+      for (var i of ups) {
         await up(_require(i), queryInterface);
       }
-      install.version = ups[downs.length - 1].split('/')[2];
-      await Installs.save(install);
     }
   }
-
 }
 
-const connect = (querydb) => {
+const connect = async(querydb) => {
   if (_data.db) {
     return _data.db;
   }
@@ -341,17 +346,20 @@ const connect = (querydb) => {
     ...options
   } = querydb;
   _data.db = new Sequelize(database, username, password, options);
+  // 检查是否能连接
+  await _data.db.authenticate();
   return _data.db;
 };
 const TYPE = Sequelize; // 类型使用Sequelize
 
 export default {
   alias,
-  require : _require,
-  data : _data,
+  require: _require,
+  data: _data,
+  drop,
   get,
   define,
-  create,
+  create, 
   backup,
   removeBackup,
   restore,
