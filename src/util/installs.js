@@ -1,83 +1,146 @@
-var path = require('path');
-var fs = require('fs');
-var assert = require('assert');
+import path from 'path';
+import fs from 'fs';
+import assert from 'assert';
+import {
+  cmpVer
+} from './cmp';
+import i18n from '../i18n';
+import logger from '../log';
 
-let items;
+const OPTIONS = 'options.json';
+const INSTALLS = 'installs.json';
 
-function loadItems() {
-  var file = path.normalize(saasplat.systemdb);
+function getDb() {
+  return saasplat.systemdb || path.join(saasplat.appPath, '.saasplat');
+}
+
+function toArray(obj) {
+  if (Array.isArray(obj)) {
+    return obj;
+  }
+  return [];
+}
+
+function toObject(obj) {
+  return obj || {};
+}
+
+function readFileJson(filename, valueFormater = toObject) {
+  let file = path.normalize(getDb() + path.sep + filename);
+  logger.debug(i18n.t('开始读取文件') + file);
   if (fs.existsSync(file)) {
-    return JSON.parse(fs.readFileSync(file)) || {};
+    try {
+      return valueFormater(JSON.parse(fs.readFileSync(file)));
+    } catch (err) {
+      logger.debug(i18n.t('读取文件失败，跳过'), err);
+      return valueFormater();
+    }
   } else {
-    return {};
+    return valueFormater();
   }
 }
 
-function saveItems(items) {
-  var file = path.normalize(saasplat.systemdb);
-  fs.writeFileSync(file, JSON.stringify(items, null, 2));
+function saveJsonFile(filename, json) {
+  let file = path.normalize(getDb() + path.sep + filename);
+  let ps = path.dirname(file).split(path.sep);
+  let p = '';
+  for (let dir of ps) {
+    p = path.join(p, dir);
+    if (!fs.existsSync(p)) {
+      logger.debug(i18n.t('开始创建目录') + p);
+      fs.mkdirSync(p);
+    }
+  }
+  logger.debug(i18n.t('开始写入文件') + file);
+  fs.writeFileSync(file, JSON.stringify(json, null, 2));
 }
+
+let _items;
 
 export default {
   find: (name, status, version) => {
     assert(name);
-    if (!this.items) {
-      this.items = this.loadItems();
+    if (!_items) {
+      _items = readFileJson(INSTALLS, toArray);
     }
-    return items.filter(item => item.name == name &&
+    return _items.filter(item => item.name == name &&
       (status == undefined || item.status == status) &&
-      (version == undefined || item.version == version)
-    );
+      (version == undefined || item.version == version)).sort((a, b) => {
+      return cmpVer(a.version, b.version);
+    });
   },
 
   has: (status) => {
-    return !!items.find(item => item.status == status);
+    return !!_items.find(item => item.status == status);
   },
 
   commit: () => {
-    if (!this.items) {
-      this.items = this.loadItems();
+    if (!_items) {
+      _items = readFileJson(INSTALLS, toArray);
     }
-    this.items.forEach(item => {
+    _items.forEach(item => {
       if (item.status == 'waitCommit') {
         item.status = 'install';
       }
     });
-    this.saveItems(this.items);
+    this.saveJsonFile(INSTALLS, _items);
   },
 
-  rollback: () => {
-    if (!this.items) {
-      this.items = this.loadItems();
+  rollback: (modules) => {
+    if (!_items) {
+      _items = readFileJson(INSTALLS, toArray);
     }
-    this.items.filter(item => item.status == 'waitCommit').forEach(item=>{
-      const exists = this.items.find(it => it.name == item.name && it.version == item.version);
+    _items.filter(item => item.status == 'waitCommit' && modules.indexOf(item.name) > -1).forEach(item => {
+      const exists = _items.find(it => it.name == item.name && it.version == item.version);
       if (exists) {
-        this.items.splice(this.items.indexOf(exists), 1);
+        _items.splice(_items.indexOf(exists), 1);
       }
     });
-    this.saveItems(this.items);
+    saveJsonFile(INSTALLS, _items);
   },
 
-  save: (...items) => {
-    if (!this.items) {
-      this.items = this.loadItems();
+  getInstallMode: () => {
+    return readFileJson(OPTIONS, toObject).installMode;
+  },
+
+  setInstallMode: (installMode) => {
+    let options = readFileJson(OPTIONS, toObject);
+    options.installMode = installMode;
+    saveJsonFile(OPTIONS, options);
+  },
+
+  setRevertVersion: (revertVersion) => {
+    let options = readFileJson(OPTIONS, toObject);
+    options.revertVersion = revertVersion;
+    saveJsonFile(OPTIONS, options);
+  },
+
+  getRevertVersion: () => {
+    return readFileJson(OPTIONS, toObject).revertVersion;
+  },
+
+  save: (items) => {
+    if (!_items) {
+      _items = readFileJson(INSTALLS, toArray);
     }
     items.filter(item => item.status == 'uninstall').forEach(item => {
-      const exists = this.items.find(it => it.name == item.name && it.version == item.version);
+      const exists = _items.find(it => it.name == item.name && it.version == item.version);
       if (exists) {
-        this.items.splice(this.items.indexOf(exists), 1);
+        _items.splice(_items.indexOf(exists), 1);
       }
     });
     items.filter(item => item.status != 'uninstall').forEach(item => {
-      const exists = this.items.find(it => it.name == item.name && it.version == item.version);
+      const exists = _items.find(it => it.name == item.name && it.version == item.version);
       if (exists) {
+        if (exists.status != item.status && exists.status == 'install') {
+          throw new Error(exists.name + ' v' + exists.version + i18n.t('已经安装'));
+        }
         exists.status = item.status;
         exists.installDate = item.installDate;
       } else {
-        this.items.push(item);
+        _items.push(item);
       }
     });
-    this.saveItems(this.items);
+    saveJsonFile(INSTALLS, _items);
   }
 }

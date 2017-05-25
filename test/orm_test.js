@@ -4,11 +4,9 @@ import orm from '../src/orm';
 import '../src/base';
 import * as utils from './utils/file';
 
-describe('查询', function() {
-  it('连接备份创建回复表', async function() {
-    const db = orm.connect({"username": "root", "password": "123456", "database": "test_db", "host": "localhost", "dialect": "mysql"});
-
-    await db.authenticate();
+describe('数据', function() {
+  it('迁移数据', async function() {
+    const db = await orm.connect({"username": "root", "password": "123456", "database": "test_db", "host": "localhost", "dialect": "mysql"});
 
     const queryInterface = db.getQueryInterface();
 

@@ -266,67 +266,47 @@ const down = async(Migration, queryInterface) => {
   await migration.down();
 }
 
-
 // 升级或者降级
 const migrate = async(modules, revert = false) => {
   const queryInterface = _data.db.getQueryInterface();
-  const migrations = _data.alias.filter(item => item.indexOf(`${module}/${_dirname.migration}/`)).sort((a, b) => {
-    const v1 = a.split('/')[2].split('.');
-    const v2 = b.split('/')[2].split('.');
-    for (let i = 0; i < v1.length || i < v2.length; i++) {
-      if (v1[i] < v2[i]) {
-        return -1;
-      } else if (v1[i] > v2[i]) {
-        return 1;
-      }
-    }
-    return 0;
-  });
+  const migrations = _data.alias.filter(item =>
+    item.indexOf(`${module}/${_dirname.migration}/`)).sort(cmpVer);
   if (revert) {
-    const uninstalls = [];
     for (let module of modules) {
-      const last = await Installs.find(module, 'waitCommit');
-      if (!last) {
+      const last = last(await Installs.find(module, 'install'));
+      const current = last(await Installs.find(module, 'waitCommit'));
+      if (!current || !last) {
         return;
       }
-      const downToVersion = last.version.split('.');
       const downs = migrations.filter(item => {
         const sp = item.split('/');
         if (sp[0] !== module) {
           return false;
         }
-        const v = sp[2].split('.');
-        for (let i = 0; i < v.length; i++) {
-          if (v[i] < downToVersion[i]) {
-            return true;
-          }
-        }
-        return false;
+        const v = sp[2];
+        return cmpVer(v, last.version) > 0 && cmpVer(v, current.version) < 0;
       });
       for (let i of downs) {
         await down(_require(i), queryInterface);
       }
     }
   } else {
-    const installs = [];
     for (let module of modules) {
-      const last = await Installs.find(module) || {
+      const last = await Installs.find(module, 'install') || {
         name: module,
         version: '0.0.0'
       };
-      const lastVersion = last.version.split('.');
+      const current = last(await Installs.find(module, 'waitCommit'));
+      if (!current) {
+        return;
+      }
       const ups = migrations.filter(item => {
         const sp = item.split('/');
         if (sp[0] !== module) {
           return false;
         }
-        const v = sp[2].split('.');
-        for (let i = 0; i < v.length; i++) {
-          if (v[i] > lastVersion[i]) {
-            return true;
-          }
-        }
-        return false;
+        const v = sp[2];
+        return cmpVer(v, last.version) > 0 && cmpVer(v, current.version) < 0;
       });
       for (var i of ups) {
         await up(_require(i), queryInterface);
@@ -359,7 +339,7 @@ export default {
   drop,
   get,
   define,
-  create, 
+  create,
   backup,
   removeBackup,
   restore,
