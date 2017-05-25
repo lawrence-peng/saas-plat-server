@@ -71,6 +71,9 @@ export default {
   },
 
   has: (status) => {
+    if (!_items) {
+      _items = readFileJson(INSTALLS, toArray);
+    }
     return !!_items.find(item => item.status == status);
   },
 

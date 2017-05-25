@@ -184,14 +184,14 @@ describe('业务', function () {
 
     // 升级
     eventCount = 0;
-    utils.exists(__dirname + '/module1_updatefiles', __dirname + '/data/' + id + '/module1', utils.copy);
+    utils.exists(__dirname + '/module1_updatefiles_1.0.1', __dirname + '/data/' + id + '/module1', utils.copy);
 
     cqrs.fxData.alias['module1/migration/1.0.1'] = path.normalize(__dirname + '/data/' + id + '/module1/src/migration/1.0.1.js');
-    cqrs.fxData.alias['module1/migration/1.0.2'] = path.normalize(__dirname + '/data/' + id + '/module1/src/migration/1.0.2.js');
+    cqrs.fxData.alias['module1/migration/1.0.1_test2'] = path.normalize(__dirname + '/data/' + id + '/module1/src/migration/1.0.1_test2.js');
 
     await Installs.save(['module1'].map(name => ({
       name,
-      version: '1.0.2',
+      version: '1.0.1',
       installDate: new Date(),
       status: 'waitCommit'
     })));

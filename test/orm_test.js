@@ -3,10 +3,11 @@ import path from 'path';
 import orm from '../src/orm';
 import '../src/base';
 import * as utils from './utils/file';
+import {querydb} from './config';
 
 describe('数据', function() {
   it('迁移数据', async function() {
-    const db = await orm.connect({"username": "root", "password": "123456", "database": "test_db", "host": "localhost", "dialect": "mysql"});
+    const db = await orm.connect(querydb);
 
     const queryInterface = db.getQueryInterface();
 

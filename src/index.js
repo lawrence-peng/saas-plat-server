@@ -12,7 +12,7 @@ import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
-
+import logger from './log';
 import i18n from './i18n';
 
 import Installs from './util/installs';
@@ -45,13 +45,15 @@ export default class {
     assert(appPath, '应用程序启动路径不能为空');
     this.debugOutput = !!debugOutput;
     saasplat.appPath = this.appPath = path.normalize(appPath);
-    saasplat.devPath = this.devPath = path.normalize(devPath);
+    saasplat.devPath = this.devPath = devPath && path.normalize(devPath);
+    this.devModules = [];
     if (Array.isArray(modules)) {
       this.module = modules;
+      this.glob = `+(${modules.join('|')})`
     } else if (typeof modules == 'string') {
       this.glob = modules;
     } else {
-      saasplat.log('module not found');
+      logger.warn('module not found');
     }
     if (Array.isArray(devModules)) {
       this.module = (this.module || []).concat(devModules);
@@ -72,6 +74,9 @@ export default class {
       mod = module + path.sep;
     }
     let subPath;
+    if (!this.moduleConfigs) {
+      this.moduleConfigs = {};
+    }
     if (this.moduleConfigs[module]) {
       subPath = this.moduleConfigs[module].main;
     } else {
@@ -131,7 +136,7 @@ export default class {
 
   loadORM(withMigration = false) {
     for (let itemType of ormTypes) {
-      if (!withMigration && itemType == 'datamigration'){
+      if (!withMigration && itemType == 'datamigration') {
         continue;
       }
       this.module.forEach(module => {
@@ -146,7 +151,7 @@ export default class {
   // 加载cqrs
   loadCQRS(withMigration = false) {
     for (let itemType of cqrsTypes) {
-      if (!withMigration && itemType == 'migration'){
+      if (!withMigration && itemType == 'migration') {
         continue;
       }
       this.module.forEach(module => {
@@ -205,8 +210,9 @@ export default class {
     this.logDebug('load config type \n', config.alias());
   }
 
-  compile(options) {
+  compile(options = {}) {
     assert(this.devPath || this.appPath);
+    this.loadModule();
     //this.loadModule();
     this.logDebug(`watch ${this.devPath || this.appPath} for compile...`);
     let reloadInstance = this.getReloadInstance();
@@ -216,7 +222,7 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    const devModules = glob.sync(this.devGlob, {
+    const devModules = glob.sync(this.devPath ? this.devGlob : this.glob, {
       cwd: this.devPath || this.appPath
     })
     let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
@@ -298,9 +304,9 @@ export default class {
     // todo
   }
 
-  logDebug() {
+  logDebug(...args) {
     if (this.debugOutput) {
-      saasplat.debug.apply(saasplat, arguments);
+      logger.debug(...args);
     }
   }
 
@@ -316,9 +322,7 @@ export default class {
 
   getReloadInstance() {
     let instance = new AutoReload(this.devPath || this.appPath, this.module, () => {
-      this.clearData();
-      this.load();
-      boots.startup();
+      this.reload();
     });
     return instance;
   }
@@ -334,6 +338,12 @@ export default class {
     }
     let instance = this.getReloadInstance();
     instance.run();
+  }
+
+  reload() {
+    this.clearData();
+    this.load();
+    boots.startup();
   }
 
   preload() {
@@ -353,21 +363,36 @@ export default class {
     for (let name in boots.data.alias) {
       boots.require(boots.data.alias[name]);
     }
-    saaplat.log('saasplat preload packages finished', 'PRELOAD', startTime);
+    logger.log(i18n.t('预加载程序包完成'), 'PRELOAD', startTime);
   }
 
   // 回退上次安装或升级失败
   async rollback() {
+    await this.init();
+    await this.init();
+    this.loadModule();
+    this.loadORM(true);
+    this.loadCQRS(true);
+    this.loadConfig();
+
     if (await Installs.has('waitCommit')) {
+      logger.log(i18n.t('开始回滚安装失败模块'));
       await cqrs.backMigrate();
       if (await Installs.getInstallMode() == 'resouce') {
+        logger.log(i18n.t('恢复数据库快速表备份'));
         await orm.restore(this.module);
       } else {
-        await cqrs.migrate(this.module, true);
+        //await cqrs.migrate(this.module, true);
+        logger.log(i18n.t('回退数据库迁移'));
         await orm.migrate(this.module, true);
       }
       await Installs.rollback(this.module);
+      logger.log(i18n.t('回滚失败模块完成'));
+    } else {
+      logger.log(i18n.t('无回滚任务'));
     }
+
+    return true;
   }
 
   // 已有模块升级后需要数据迁移
@@ -382,7 +407,6 @@ export default class {
     this.loadORM(true);
     this.loadCQRS(true);
     this.loadConfig();
-    this.loadMigrations();
 
     try {
       // 记录
@@ -401,7 +425,7 @@ export default class {
       // 提交
       await Installs.commit();
     } catch (err) {
-      saasplat.error(i18n.t('数据迁移失败'), err);
+      logger.error(i18n.t('数据迁移失败'), err);
       await cqrs.backMigrate();
       // 降级数据
       await orm.migrate(this.module, true);
@@ -424,7 +448,6 @@ export default class {
     this.loadORM(true);
     this.loadCQRS(true);
     this.loadConfig();
-    this.loadMigrations();
 
     try {
       // 记录
@@ -450,7 +473,7 @@ export default class {
       await cqrs.backMigrate();
       await orm.restore(this.module);
       await Installs.rollback(this.module);
-      saasplat.error(i18n.t('业务回溯失败'), err);
+      logger.error(i18n.t('业务回溯失败'), err);
       return false;
     }
     await orm.removeBackup();
@@ -461,21 +484,32 @@ export default class {
     process.on('uncaughtException', function (err) {
       var msg = err.message || err;
       if (msg.toString().indexOf(' EADDRINUSE ') > -1) {
-        saasplat.log(err);
+        logger.warn(err);
         process.exit();
       } else {
-        saasplat.error(err);
+        logger.error(err);
       }
     });
     process.on('unhandledRejection', function (err) {
-      saasplat.error(err);
+      logger.error(err);
     });
   }
 
   async init() {
-    assert(this.querydb, '数据库必须配置');
-    if (saasplat.debugMode) {
-      saasplat.log('saasplat debug mode');
+    // assert(this.querydb, '数据库必须配置');
+    // assert(this.eventmq, '数据库必须配置');
+    // assert(this.eventdb, '数据库必须配置');
+    if (!this.querydb) {
+      logger.warn('querydb未进行配置，启用默认配置');
+    }
+    if (!this.eventdb) {
+      logger.warn('eventdb未进行配置，启用默认配置');
+    }
+    if (!this.eventmq) {
+      logger.warn('eventmq未进行配置，启用默认配置');
+    }
+    if (this.debugMode) {
+      logger.log('saasplat debug mode');
     }
     // 连接查询库
     await orm.connect(this.querydb);

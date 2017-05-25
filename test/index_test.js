@@ -1,10 +1,13 @@
-import {expect} from 'chai';
+import {
+  expect
+} from 'chai';
 import path from 'path';
 import App from '../src';
 import * as utils from './utils/file';
+import {querydb,eventdb,eventmq} from './config';
 
-describe('应用', function() {
-  it('启动后停止服务', function() {
+describe('应用', function () {
+  it('启动后停止服务', function () {
     const instance = new App({
       appPath: path.normalize(path.join(__dirname, '../demo')),
       srcPath: path.normalize(path.join(__dirname, '../demo')),
@@ -19,16 +22,20 @@ describe('应用', function() {
     expect(instance.module).to.eql(['module1', 'this-module-has-long-name']);
   })
 
-  it('安装或升级一个模块', async function() {
-    const id = (new Date).getTime();
-    utils.copy(path.normalize(path.join(__dirname, 'data/module1')), path.normalize(path.join(__dirname, 'data/' + id + '/module1')));
+  it('安装或升级一个模块', async function () {
+    const id = 'index_test';
+    utils.exists(__dirname + '/module1', __dirname + '/data/' + id + '/module1', utils.copy);
     const instance = new App({
       appPath: path.normalize(path.join(__dirname, 'data/' + id)),
-      systemdb: path.normalize(path.join(__dirname, 'data/' + id + '/installs.json')),
-      modules: ['module1']
+      modules: ['module1'],
+      querydb,
+      eventmq
+      eventdb
     });
     instance.compile();
-    expect(await instance.migrate()).to.be.true;
+    // 新模块都必须采用回溯方式安装
+    expect(await instance.rollback()).to.be.true;
+    expect(await instance.resource()).to.be.true;
 
     // 再执行也ok
     expect(await instance.migrate()).to.be.true;
@@ -41,17 +48,25 @@ describe('应用', function() {
       }
     });
 
-    utils.copy(path.normalize(path.join(__dirname, 'files/module1_updatefiles')), path.normalize(path.join(__dirname, 'data/' + id + '/module1')));
+    utils.copy(path.normalize(path.join(__dirname, 'files/module1_updatefiles_1.0.1')), path.normalize(path.join(__dirname, 'data/' + id + '/module1')));
+
+    instance.reload();
 
     expect(await instance.migrate()).to.be.true;
 
-      // 也去迁移代码1.0.2执行设置了默认QQ
-      const aaa = saasplat.module.get('module1/account').findOne({
-        where: {
-          userName: 'aaa'
-        }
-      });
-      expect(aaa.QQ).to.be.equal('noqq');
+    utils.copy(path.normalize(path.join(__dirname, 'files/module1_updatefiles_1.0.2')), path.normalize(path.join(__dirname, 'data/' + id + '/module1')));
+
+    instance.reload();
+
+    expect(await instance.migrate()).to.be.true;
+
+    // 也去迁移代码1.0.2执行设置了默认QQ
+    const aaa = saasplat.module.get('module1/account').findOne({
+      where: {
+        userName: 'aaa'
+      }
+    });
+    expect(aaa.QQ).to.be.equal('noqq');
 
     // QQ字段增加
     saasplat.comand.publish({
@@ -75,7 +90,7 @@ describe('应用', function() {
 
     const app2 = new App({
       appPath: path.normalize(path.join(__dirname, 'data/' + id)),
-      systemdb: path.normalize(path.join(__dirname, 'data/' + id + '/installs.json')),
+      systemdb: path.normalize(path.join(__dirname, 'data/' + id)),
       modules: ['module2']
     });
     expect(await app2.migrate()).to.be.true;
@@ -96,7 +111,11 @@ describe('应用', function() {
       }
     });
 
-    const other_ccc = saasplat.module.get('module2/other_account').findAll({where:{name:'ccc'}});
+    const other_ccc = saasplat.module.get('module2/other_account').findAll({
+      where: {
+        name: 'ccc'
+      }
+    });
     expect(other_ccc).to.not.be.null;
   })
 })

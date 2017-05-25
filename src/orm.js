@@ -3,6 +3,10 @@ import fs from 'fs';
 import Sequelize from 'sequelize'; // orm
 import i18n from './i18n';
 import Installs from './util/installs';
+import {
+  cmpVer,
+  lastChild
+} from './util/cmp';
 
 const _data = {
   alias: {},
@@ -269,7 +273,7 @@ const down = async(Migration, queryInterface) => {
 // 升级或者降级
 const migrate = async(modules, revert = false) => {
   const queryInterface = _data.db.getQueryInterface();
-  const migrations = _data.alias.filter(item =>
+  const migrations = Object.keys(_data.alias).filter(item =>
     item.indexOf(`${module}/${_dirname.migration}/`)).sort(cmpVer);
   if (revert) {
     for (let module of modules) {
@@ -320,9 +324,9 @@ const connect = async(querydb) => {
     return _data.db;
   }
   let {
-    database,
-    username,
-    password,
+    database = 'saasplat_querys',
+    username = 'root',
+    password = '',
     ...options
   } = querydb;
   _data.db = new Sequelize(database, username, password, options);
