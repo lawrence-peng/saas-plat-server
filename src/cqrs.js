@@ -3,12 +3,20 @@ import * as cqrsCore from 'cqrs-fx/lib/core';
 import * as cqrsEvent from 'cqrs-fx/lib/event';
 import * as cqrsBus from 'cqrs-fx/lib/bus';
 import config from 'cqrs-fx/lib/config';
-import {getDecoratorToken} from 'cqrs-fx/lib/event/decorator';
+import {
+  getDecoratorToken
+} from 'cqrs-fx/lib/event/decorator';
 import Installs from './util/installs';
 import logger from './log';
 import i18n from './i18n';
+import {
+  cmpVer,
+  lastChild
+} from './util/cmp';
 
-import {getModuleVersion} from './util/modulever';
+import {
+  getModuleVersion
+} from './util/modulever';
 
 const _dirname = {
   migration: 'migration'
@@ -22,7 +30,7 @@ const init = (cfg) => {
       eventMQ: {
         name: 'eventqueue',
         port: 6379,
-        host: '127.0.0.1',
+        host: 'localhost',
         ...cfg.eventmq
       }
     },
@@ -49,7 +57,9 @@ const init = (cfg) => {
 // 重溯B时需要连带C的事件，所以这里需要计算modules的所有依赖模块
 const caluModules = (modules) => {
   const calus = [...modules];
-  Object.keys(cqrsCore.fxData.alias).filter(item => item.indexOf(`/event/`) > -1 && modules.indexOf(item.split('/')[0]) > -1).map(alias => cqrsCore._require(alias)).forEach((type) => {
+  Object.keys(cqrsCore.fxData.alias).filter(item =>
+    item.indexOf(`/event/`) > -1 && modules.indexOf(item.split('/')[0]) > -1).map(alias =>
+    cqrsCore._require(alias)).forEach((type) => {
     let ctoken = getDecoratorToken(type);
     if (!ctoken.name && !ctoken.module) {
       if (!type.prototype) {
@@ -69,7 +79,7 @@ const caluModules = (modules) => {
       }
       let {
         module = ctoken.module,
-        name = p
+          name = p
       } = getDecoratorToken(type.prototype[p]);
       if (module && name) {
         if (calus.indexOf(module) == -1) {
@@ -81,10 +91,21 @@ const caluModules = (modules) => {
   return calus;
 }
 
+const invoke = (callback, ...args) => {
+  if (!callback) {
+    return;
+  }
+  if (typeof callback == 'function') {
+    try {
+      callback(...args);
+    } catch (err) {
+      logger.warn(i18n.t('回调失败'), err);
+    }
+  }
+}
+
 const createListener = (total, progressCallback) => {
-  let current,
-    success,
-    failed
+  let current
   return ({
     module,
     name,
@@ -93,26 +114,22 @@ const createListener = (total, progressCallback) => {
   }, code, error) => {
     if (!code) {
       current++;
-      logger.info(i18n.t('开始重塑事件'), module + '/' + name, id);
+      logger.info(i18n.t('开始回溯事件'), module + '/' + name, id);
     } else if (code == 'ok') {
-      success++;
-      logger.info(i18n.t('重塑事件完成'), module + '/' + name, id);
+      logger.info(i18n.t('回溯事件完成'), module + '/' + name, id);
     } else {
-      failed++;
-      logger.info(i18n.t('重塑事件失败'), module + '/' + name, id, code, error);
+      logger.info(i18n.t('回溯事件失败'), module + '/' + name, id, code, error);
+      // 回溯是不允许失败的，必须保证所有已经发生的业务都被执行
+      throw new Error(error);
     }
-    if (typeof progressCallback == 'function') {
-      progressCallback({
-        module,
-        name,
-        type,
-        id,
-        total,
-        current,
-        success,
-        failed
-      });
-    }
+    invoke(progressCallback, {
+      module,
+      name,
+      type,
+      id,
+      total,
+      current
+    });
   }
 }
 
@@ -121,7 +138,7 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
   saasplat.resourcing = true;
   let total = 0,
     current = 0;
-  logger.info(i18n.t('开始重塑事件...'));
+  logger.info(i18n.t('开始回溯事件...'));
   try {
     const eventModules = caluModules(modules);
     const eventDispatcher = cqrsBus.getEventDispatcher();
@@ -133,7 +150,7 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
     });
     const listener = createListener(total, progressCallback);
     eventDispatcher.addListener(listener, listener, listener);
-    logger.info(i18n.t('预计重塑事件') + ' ' + total);
+    logger.info(i18n.t('预计回溯事件') + ' ' + total);
     const spec = {
       module: {
         $in: eventModules
@@ -145,7 +162,9 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
       }
     }
     // 按时间顺序回溯
-    const cursor = await eventStorage.visit(spec, {timestamp:1}, async(item) => {
+    const cursor = await eventStorage.visit(spec, {
+      timestamp: 1
+    }, async(item) => {
       current++;
       await eventDispatcher.dispatch({
         type: 'event',
@@ -159,11 +178,11 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
         version: item.version,
         timestamp: item.timestamp
       });
-      logger.info(i18n.t('已重塑事件') + ' ' + Math.floor(current * 100.0 / total) + '%');
+      logger.info(i18n.t('已回溯事件') + ' ' + Math.floor(current * 100.0 / total) + '%');
     });
   } finally {
     delete saasplat.resourcing;
-    logger.info(i18n.t('重塑事件完成'));
+    logger.info(i18n.t('回溯事件完成'));
   }
 }
 
@@ -172,95 +191,70 @@ const up = async(Migration) => {
   await migration.up();
 }
 
-const down = async(Migration) => {
-  const migration = new Migration();
-  await migration.down();
-}
+// const down = async(Migration) => {
+//   const migration = new Migration();
+//   await migration.down();
+// }
 
 const revertVersion = async() => {
   const eventStorage = cqrsEvent.getStorage().eventStorage;
-  const lastEvent = await eventStorage.first({}, {timestamp: 1});
-  if (lastEvent) {
-    return lastEvent.timestamp;
-  }
-  return new Date();
-}
-
-const migrate = async(modules, revert) => {
-  const migrations = cqrsCore.fxData.alias.filter(item => item.indexOf(`${module}/${_dirname.migration}/`)).sort((a, b) => {
-    const v1 = a.split('/')[2].split('.');
-    const v2 = b.split('/')[2].split('.');
-    for (let i = 0; i < v1.length || i < v2.length; i++) {
-      if (v1[i] < v2[i]) {
-        return -1;
-      } else if (v1[i] > v2[i]) {
-        return 1;
-      }
-    }
-    return 0;
+  const lastEvent = await eventStorage.first({}, {
+    timestamp: 1
   });
-  if (revert) {
-    const mv = getModuleVersion(modules);
-    modules.forEach(async(module) => {
-      const install = await Installs.find(module);
-      if (!install) {
-        return;
-      }
-      const v2 = install.version.split('.');
-      const cv = mv[module].split('.');
-      const downs = migrations.filter(item => {
-        const sp = item.split('/');
-        if (sp[0] !== module) {
-          return false;
-        }
-        const v = sp[2].split('.');
-        for (let i = 0; i < v.length; i++) {
-          if (v[i] < v2[i] && v[1] < cv[i]) {
-            return true;
-          }
-        }
-        return false;
-      });
-      for (var i in downs) {
-        await down(_require(i));
-      }
-      install.version = downs[downs.length - 1].split('/')[2];
-      await Installs.save(install);
-    });
-  } else {
-    const mv = getModuleVersion(modules);
-    modules.forEach(async(module) => {
-      const install = await Installs.find(module) || {
-        name: module,
-        version: '0.0.0',
-        status: 'install'
-      };
-      const v2 = install.version.split('.');
-      const cv = mv[module].split('.');
-      const ups = migrations.filter(item => {
-        const sp = item.split('/');
-        if (sp[0] !== module) {
-          return false;
-        }
-        const v = sp[2].split('.');
-        for (let i = 0; i < v.length; i++) {
-          // 大于已安装版本， 并且小于当前程序版本
-          if (v[i] > v2[i] && v[i] < cv[i]) {
-            return true;
-          }
-        }
-        return false;
-      });
-      for (var i in ups) {
-        await up(_require(i));
-      }
-      install.version = ups[downs.length - 1].split('/')[2];
-      await Installs.save(install);
-    });
-  }
+  await Installs.setRevertVersion(lastEvent ? lastEvent.timestamp : new Date());
 }
 
-const backMigrate = async(revertVersion) => {
+const migrate = async(modules, progressCallback) => {
+  assert(modules);
+  logger.info(i18n.t('开始迁移...'));
+  const migrations = {};
+  let total = 0;
+  let current = 0;
+  for (module of modules) {
+    const last = lastChild(await Installs.find(module, 'install')) || {
+      name: module,
+      version: '0.0.0',
+      status: 'install'
+    };
+    const current = lastChild(await Installs.find(module, 'waitCommit'));
+    if (current) {
+      migrations[module] = Object.keys(cqrsCore.fxData.alias).filter(item =>
+        item.indexOf(`${module}/${_dirname.migration}/`) > -1).filter(item => {
+        const sp = item.split('/');
+        // 大于已安装版本， 并且小于等于当前程序版本
+        return cmpVer(sp[2], last.version) > 0 && cmpVer(sp[2], current.version) <= 0;
+      }).sort((a, b) => {
+        const v1 = a.split('/')[2];
+        const v2 = b.split('/')[2];
+        return cmpVer(v1, v2);
+      });
+      total += migrations[module].length;
+    } else {
+      throw new Error(module + i18n.t('模块状态无效'));
+    }
+  }
+  logger.info(i18n.t('预计迁移命令') + ' ' + total);
+  invoke(progressCallback, {
+    total,
+    current
+  });
+  for (const module of modules) {
+    const ups = migrations[module];
+    for (var i of ups) {
+      current++;
+      await up(cqrsCore._require(i));
+      invoke(progressCallback, {
+        total,
+        current
+      });
+      logger.info(i18n.t('已执行迁移') + ' ' + Math.floor(current * 100.0 / total) + '%');
+    }
+  }
+  logger.info(i18n.t('迁移完成'));
+}
+
+const backMigrate = async() => {
+  const revertVersion = await Installs.getRevertVersion();
   if (!revertVersion) {
     return false;
   }
@@ -269,14 +263,17 @@ const backMigrate = async(revertVersion) => {
     version: {
       $gt: revertVersion
     }
-  }, {force: true});
+  }, {
+    force: true
+  });
+  await Installs.setRevertVersion(null);
   return true;
 }
 
 export default {
   init,
-  fxData : cqrsCore.fxData,
-  alias : cqrsCore.alias,
+  fxData: cqrsCore.fxData,
+  alias: cqrsCore.alias,
   resource,
   migrate,
   revertVersion,

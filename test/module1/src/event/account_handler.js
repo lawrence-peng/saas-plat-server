@@ -2,7 +2,6 @@ export default class extends saasplat.eventhandler {
   async accountCreated({
     userName,
     contactPhone,
-    userName,
     password,
     displayName,
     email,

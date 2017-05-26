@@ -1,5 +1,5 @@
 require('babel-polyfill');
-var app = require('../lib').default;
+var app = require('../app').default;
 var path = require('path');
 var fs = require('fs');
 
@@ -36,7 +36,7 @@ if (modules.length > 0) {
       eventdb: cfg.eventdb,
       systemdb: cfg.systemdb
     });
-    instance.resource();
+    instance.migrate();
   }
 
   if (args.indexOf('--saasplat')) {
@@ -54,5 +54,5 @@ if (modules.length > 0) {
     }
   }
 } else {
-  console.log('node ./config/install.js [--saas-plat] module1 module2')
+  console.log('node ./config/update.js [--saas-plat] module1 module2')
 }
