@@ -11,11 +11,10 @@ import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
-import logger from './log';
-import i18n from './i18n';
 
+import logger from './util/log';
+import i18n from './util/i18n';
 import Installs from './util/installs';
-
 import AutoReload from './util/auto_reload';
 import WatchCompile from './util/watch_compile';
 

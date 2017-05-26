@@ -1,6 +1,5 @@
 import path from 'path';
 import fs from 'fs';
-import co from 'co';
 
 const _data = {
   alias: {},
@@ -9,7 +8,7 @@ const _data = {
 
 const getFiles = (file) => {
   let dirs = [];
-  if (fs.existsSync(file)){
+  if (fs.existsSync(file)) {
     let files = fs.readdirSync(file);
     for (var fi of files) {
       if (fs.statSync(path.join(file, fi)).isFile())
@@ -107,20 +106,22 @@ const _require = (name, flag) => {
   return Cls;
 };
 
-const startup = ()=>{
+const startup = async() => {
   for (let name in _data.alias) {
     let runMethod = _require(_data.alias[name]).run;
-    if (typeof runMethod == 'function'){
-      co(runMethod).catch(err=>{
+    if (typeof runMethod == 'function') {
+      try {
+        await runMethod();
+      } catch (err) {
         saasplat.error(err);
-      });
+      }
     }
   }
 };
 
 export default {
   alias,
-  require:_require,
-  data:_data,
+  require: _require,
+  data: _data,
   startup
 };

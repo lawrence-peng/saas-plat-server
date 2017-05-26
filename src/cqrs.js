@@ -7,8 +7,8 @@ import {
   getDecoratorToken
 } from 'cqrs-fx/lib/event/decorator';
 import Installs from './util/installs';
-import logger from './log';
-import i18n from './i18n';
+import logger from './util/log';
+import i18n from './util/i18n';
 import {
   cmpVer,
   lastChild

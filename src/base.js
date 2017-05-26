@@ -5,10 +5,10 @@ import path from 'path';
 import mvc from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
-import logger from './log';
+import logger from './util/log';
 import conf from './config';
 import assert from 'assert';
-import i18n from './i18n';
+import i18n from './util/i18n';
 
 global.assert = assert;
 

@@ -1,8 +1,8 @@
 import path from 'path';
 import fs from 'fs';
 import Sequelize from 'sequelize'; // orm
-import i18n from './i18n';
-import logger from './log';
+import i18n from './util/i18n';
+import logger from './util/log';
 import Installs from './util/installs';
 import {
   cmpVer,

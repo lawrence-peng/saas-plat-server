@@ -1,2 +1,2 @@
-npm run watch-compile
+npm run watch
 pause
