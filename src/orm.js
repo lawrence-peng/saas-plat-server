@@ -4,10 +4,7 @@ import Sequelize from 'sequelize'; // orm
 import i18n from './util/i18n';
 import logger from './util/log';
 import Installs from './util/installs';
-import {
-  cmpVer,
-  lastChild
-} from './util/cmp';
+import {cmpVer, lastChild} from './util/cmp';
 
 const _data = {
   alias: {},
@@ -28,8 +25,8 @@ const getFiles = (file) => {
     for (var fi of files) {
       if (fs.statSync(path.join(file, fi)).isFile())
         dirs.push(fi);
+      }
     }
-  }
   return dirs;
 };
 
@@ -154,9 +151,11 @@ const get = (module, name) => {
   }
   try {
     const modelInst = new _require(modelName);
-    _data.defines[modelName] = define(module, name, typeof modelInst.schame == 'function' ?
-      modelInst.schame() : {}, typeof modelInst.schame == 'function' ?
-      modelInst.options() : {});
+    _data.defines[modelName] = define(module, name, typeof modelInst.schame == 'function'
+      ? modelInst.schame()
+      : {}, typeof modelInst.schame == 'function'
+      ? modelInst.options()
+      : {});
     return _data.defines[modelName];
   } catch (e) {
     logger.warn(e);
@@ -166,16 +165,16 @@ const get = (module, name) => {
 
 const createModel = async(Model, force = false) => {
   const modelInst = new Model;
-  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function' ?
-    modelInst.schame() : {}, typeof modelInst.options == 'function' ?
-    modelInst.options() : {});
+  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function'
+    ? modelInst.schame()
+    : {}, typeof modelInst.options == 'function'
+    ? modelInst.options()
+    : {});
   if (model) {
     // force = drop and create
-    await model.sync({
-      force
-    });
+    await model.sync({force});
     // todo 执行升级脚本
-    logger.info(model.name + i18n.t('表已创建或更新'));
+    logger.info(i18n.t('表已创建'), model.name);
   }
 };
 
@@ -197,13 +196,12 @@ const create = async(modules, name, force = false) => {
     if (name) {
       await createModel(_require(`${module}/model/${name}`), force);
     } else {
-      if (Object.keys(_data.alias).length<=0){
+      const models = Object.keys(_data.alias).filter(item => item.indexOf(`${module}/model/`) > -1);
+      if (models.length <= 0) {
         logger.warn(i18n.t('未加载任何模型定义'));
       }
-      for (var i in _data.alias) {
-        if (i.indexOf(`${module}/model/`) > -1) {
-          await createModel(_require(i), force);
-        }
+      for (const item of models) {
+        await createModel(_require(item), force);
       }
     }
   }
@@ -229,9 +227,11 @@ const backup = async(modules) => {
   for (let name of tableNames) {
     if (!modules || modules.indexOf(name.split('_')[0]) > -1) {
       if (name.endsWith('__bak')) {
+        logger.info(i18n.t(`删除历史备份`) + name);
         await queryInterface.dropTable(name);
         continue;
       }
+      logger.info(i18n.t(`备份数据表`) + name);
       await queryInterface.renameTable(name, name + '__bak');
     }
   }
@@ -244,6 +244,7 @@ const removeBackup = async(modules) => {
   tableNames.forEach(name => {
     if (!modules || (name.split('_')[0] in modules)) {
       if (name.endsWith('__bak')) {
+        logger.info(i18n.t(`删除历史备份`) + name);
         queryInterface.dropTable(name);
       }
     }
@@ -260,11 +261,13 @@ const restore = async(modules, force = false) => {
         const tblName = name.substr(0, name.length - 5);
         if (tableNames.indexOf(tblName) > -1) {
           if (force) {
+            logger.info(i18n.t(`删除数据表`) + tblName);
             await queryInterface.dropTable(tblName);
           } else {
             throw new Error(i18n.t('数据表已经存在', tblName));
           }
         }
+        logger.info(i18n.t(`回复备份`) + tblName);
         await queryInterface.renameTable(name, tblName);
       }
     }
@@ -273,11 +276,13 @@ const restore = async(modules, force = false) => {
 }
 
 const up = async(Migration, queryInterface) => {
+  logger.info(i18n.t(`升级`) + Migration.name);
   const migration = new Migration(queryInterface);
   await migration.up();
 }
 
 const down = async(Migration, queryInterface) => {
+  logger.info(i18n.t(`降级`) + Migration.name);
   const migration = new Migration(queryInterface);
   await migration.down();
 }
@@ -285,8 +290,7 @@ const down = async(Migration, queryInterface) => {
 // 升级或者降级
 const migrate = async(modules, revert = false) => {
   const queryInterface = _data.db.getQueryInterface();
-  const migrations = Object.keys(_data.alias).filter(item =>
-    item.indexOf(`${module}/${_dirname.migration}/`)).sort(cmpVer);
+  const migrations = Object.keys(_data.alias).filter(item => item.indexOf(`${module}/${_dirname.migration}/`)).sort(cmpVer);
   if (revert) {
     logger.info(i18n.t(`开始回退迁移数据..`));
     for (let module of modules) {
@@ -310,7 +314,7 @@ const migrate = async(modules, revert = false) => {
   } else {
     logger.info(i18n.t(`开始迁移数据..`));
     for (let module of modules) {
-      const last = await Installs.find(module, 'install') || {
+      const last = lastChild(await Installs.find(module, 'install')) || {
         name: module,
         version: '0.0.0'
       };
@@ -340,9 +344,9 @@ const connect = async(querydb) => {
   }
   let {
     database = 'saasplat_querys',
-      username = 'root',
-      password = '',
-      ...options
+    username = 'root',
+    password = '',
+    ...options
   } = querydb;
   _data.db = new Sequelize(database, username, password, options);
   // 检查是否能连接
@@ -353,8 +357,8 @@ const TYPE = Sequelize; // 类型使用Sequelize
 
 export default {
   alias,
-  require: _require,
-  data: _data,
+  require : _require,
+  data : _data,
   drop,
   get,
   define,

@@ -17,7 +17,7 @@ saasplat.sep = path.sep;
 saasplat.join = path.join;
 saasplat.dirname = path.dirname;
 
-saasplat.getModuleConfig = function (module, name) {
+saasplat.getModuleConfig = function(module, name) {
   let config = conf.require(module + '/config/config', true);
   if (!name)
     return config;
@@ -26,10 +26,10 @@ saasplat.getModuleConfig = function (module, name) {
   config = conf.require(module + '/config/' + name, true);
   return config;
 };
-saasplat.setModuleConfig = function (module, name, value) {
+saasplat.setModuleConfig = function(module, name, value) {
   console.warn('setModuleConfig not support!');
 };
-saasplat.config = function (name, value, module) {
+saasplat.config = function(name, value, module) {
   if (value == undefined) {
     if (module) {
       let val = saasplat.getModuleConfig(module, name);
@@ -53,23 +53,23 @@ saasplat.logEnable = true;
 saasplat.log = (...args) => {
   if (saasplat.logEnable)
     logger.info.apply(logger, args);
-};
+  };
 saasplat.warn = (...args) => {
   if (saasplat.logEnable)
     logger.warn.apply(logger, args);
-};
+  };
 saasplat.debug = (...args) => {
   if (saasplat.logEnable)
     logger.debug.apply(logger, args);
-};
+  };
 saasplat.info = (...args) => {
   if (saasplat.logEnable)
     logger.info.apply(logger, args);
-};
+  };
 saasplat.error = (...args) => {
   if (saasplat.logEnable)
     logger.error.apply(logger, args);
-};
+  };
 
 // // 界面通过元数据配置方式定义
 // saasplat.view = {};
@@ -154,7 +154,10 @@ saasplat.logic.base = class extends mvc.logic.base {
 // 领域层使用cqrs
 
 saasplat.command = {};
-saasplat.command.publish = cqrs.bus.publishCommand;
+saasplat.command.publish = async(...msgs) => {
+  logger.debug(i18n.t('发送命令'), ...msgs);
+  await cqrs.bus.publishCommand(...msgs);
+}
 
 saasplat.repository = cqrs.repository;
 saasplat.aggregate = class extends cqrs.Aggregate {};
@@ -173,10 +176,7 @@ saasplat.commandhandler = class extends cqrs.CommandHandler {
 
   getRepository(name, module) {
     return {
-      get: async(
-        id,
-        ...options
-      ) => {
+      get: async(id, ...options) => {
         let rep = await this.repository.get(name, id, checkModule(module || this.module), options);
         if (!rep) {
           throw new Error((module || this.module) + '/' + name + ':' + id + i18n.t('不存在'))

@@ -1,4 +1,4 @@
-export const IP = '10.11.70.22'
+export const IP = 'localhost'
 
 export const querydb= {
   username: "root",
@@ -13,5 +13,5 @@ export const eventmq = {
 }
 
 export const eventdb = {
-  url: 'mongodb://' + IP + ':27017/cqrs'
+  url: 'mongodb://' + IP + ':27017/cqrs_TEST'
 }

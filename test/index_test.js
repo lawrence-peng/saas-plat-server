@@ -35,7 +35,8 @@ describe('应用', function () {
       modules: ['module1'],
       querydb,
       eventmq,
-      eventdb
+      eventdb,
+      logLevel: 'DEBUG'
     });
     instance.compile();
     // 新模块都必须采用回溯方式安装
@@ -61,10 +62,10 @@ describe('应用', function () {
     // 也去迁移代码1.0.2执行设置了默认QQ
     const aaa = await saasplat.model.get('module1/account').findOne({
       where: {
-        userName: 'aaa'
+        id: 'aaa'
       }
     });
-    console.log(aaa)
+  //  console.log(aaa)
     expect(aaa.QQ).to.be.equal('noqq');
 
     // QQ字段增加
@@ -79,7 +80,7 @@ describe('应用', function () {
 
     const bbb = await saasplat.model.get('module1/account').findOne({
       where: {
-        userName: 'bbb'
+        id: 'bbb'
       }
     });
     expect(bbb.QQ).to.be.equal('12345699');

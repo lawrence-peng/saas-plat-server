@@ -4,14 +4,12 @@ import assert from 'assert';
 import glob from 'glob';
 
 import mvc from './mvc';
-import {
-  app as mvcInstance
-} from './mvc';
+import {app as mvcInstance} from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
-
+import {init as logInit} from './util/log';
 import logger from './util/log';
 import i18n from './util/i18n';
 import Installs from './util/installs';
@@ -38,10 +36,10 @@ export default class {
     systemdb,
     eventmq,
     debug,
-    debugOutput
+    log,
+    logLevel
   }) {
     assert(appPath, '应用程序启动路径不能为空');
-    this.debugOutput = !!debugOutput;
     saasplat.appPath = this.appPath = path.normalize(appPath);
     saasplat.devPath = this.devPath = devPath && path.normalize(devPath);
     this.devModules = [];
@@ -51,7 +49,7 @@ export default class {
     } else if (typeof modules == 'string') {
       this.glob = modules;
     } else {
-      logger.warn('module not found');
+      logger.warn(i18n.t('模块不存在'));
     }
     if (Array.isArray(devModules)) {
       this.module = (this.module || []).concat(devModules);
@@ -64,6 +62,8 @@ export default class {
     this.eventdb = eventdb;
     saasplat.systemdb = this.systemdb = systemdb;
     this.eventmq = eventmq;
+    logInit(log);
+    logLevel && logger.setLevel(logLevel);
   }
 
   _getPath(module, type) {
@@ -86,13 +86,17 @@ export default class {
       // package可以配置main文件夹，默认app
       let packagefile = path.join(searchPath, module, 'package.json');
       if (fs.existsSync(packagefile)) {
-        config = JSON.parse(fs.readFileSync(packagefile));
+        try {
+          config = JSON.parse(fs.readFileSync(packagefile));
+        } catch (err) {
+          logger.warn(i18n.t('配置文件加载失败'), packagefile);
+        }
       }
       if (!config) {
         config = {};
       }
       this.moduleConfigs[module] = config;
-      subPath = config.main;
+      subPath = config.main && !config.main.endsWith('.js') && config.main;
     }
     return `${this.devModules.indexOf(module) > -1
       ? this.devPath
@@ -101,19 +105,16 @@ export default class {
 
   loadModule() {
     if (this.module) {
-      this.logDebug('load modules ' + this.module);
+      logger.info(i18n.t('加载模块完成'), this.module);
       return;
     }
-    let devModules = this.devPath ?
-      glob.sync(this.devGlob, {
-        cwd: this.devPath
-      }) : [];
-    let appModules = glob.sync(this.glob, {
-      cwd: this.appPath
-    }).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
+    let devModules = this.devPath
+      ? glob.sync(this.devGlob, {cwd: this.devPath})
+      : [];
+    let appModules = glob.sync(this.glob, {cwd: this.appPath}).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
     this.module = appModules.concat(devModules);
-    this.logDebug('load modules ' + this.module);
+    logger.info(i18n.t('加载模块完成'), this.module);
   }
 
   // 加载扩展的模板
@@ -128,8 +129,8 @@ export default class {
       });
     }
 
-    this.logDebug('load MVC module \n', think.module);
-    this.logDebug('load MVC type \n', think.alias());
+    logger.trace('load MVC module \n', think.module);
+    logger.trace('load MVC type \n', think.alias());
   }
 
   loadORM(withMigration = false) {
@@ -143,7 +144,7 @@ export default class {
         orm.alias(moduleType, filepath);
       });
     }
-    this.logDebug('load ORM type \n', orm.alias());
+    logger.trace('load ORM type \n', orm.alias());
   }
 
   // 加载cqrs
@@ -159,7 +160,7 @@ export default class {
         cqrs.alias(moduleType, filepath);
       });
     }
-    this.logDebug('load CQRS type \n', cqrs.alias());
+    logger.trace('load CQRS type \n', cqrs.alias());
   }
 
   loadTemplate() {
@@ -181,7 +182,7 @@ export default class {
     this.templateThink = thinkData.template;
     thinkData.template = Object.assign(thinkData.template, data);
 
-    this.logDebug('load View template \n', thinkData.template);
+    logger.trace('load View template \n', thinkData.template);
   }
 
   loadBootrstrap() {
@@ -193,7 +194,7 @@ export default class {
         boots.alias(moduleType, filepath);
       });
     }
-    this.logDebug('load bootstrap type \n', boots.alias());
+    logger.trace('load bootstrap type \n', boots.alias());
   }
 
   loadConfig() {
@@ -205,14 +206,13 @@ export default class {
         config.alias(moduleType, filepath);
       });
     }
-    this.logDebug('load config type \n', config.alias());
+    logger.trace('load config type \n', config.alias());
   }
 
   compile(options = {}) {
     assert(this.devPath || this.appPath);
     this.loadModule();
-    //this.loadModule();
-    this.logDebug(`watch ${this.devPath || this.appPath} for compile...`);
+    logger.trace(`watch ${this.devPath || this.appPath} for compile...`);
     let reloadInstance = this.getReloadInstance();
     this.compileCallback = changedFiles => {
       reloadInstance.clearFilesCache(changedFiles);
@@ -220,7 +220,9 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    const devModules = glob.sync(this.devPath ? this.devGlob : this.glob, {
+    const devModules = glob.sync(this.devPath
+      ? this.devGlob
+      : this.glob, {
       cwd: this.devPath || this.appPath
     })
     let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
@@ -232,7 +234,7 @@ export default class {
   clearData() {
     // clear exports
     for (let module of this.module || []) {
-      this.logDebug('clear ' + module);
+      logger.trace('clear ' + module);
       for (let type of bootTypes) {
         for (let alias in boots.data.alias) {
           if (boots.data.alias.hasOwnProperty(alias)) {
@@ -241,7 +243,7 @@ export default class {
                 delete boots.data.export[alias];
               }
               delete boots.data.alias[alias];
-              this.logDebug('delete ' + alias);
+              logger.trace('delete ' + alias);
             }
           }
         }
@@ -254,7 +256,7 @@ export default class {
                 delete config.data.export[alias];
               }
               delete config.data.alias[alias];
-              this.logDebug('delete ' + alias);
+              logger.trace('delete ' + alias);
             }
           }
         }
@@ -267,7 +269,7 @@ export default class {
                 delete orm.data.export[alias];
               }
               delete orm.data.alias[alias];
-              this.logDebug('delete ' + alias);
+              logger.trace('delete ' + alias);
             }
           }
         }
@@ -280,7 +282,7 @@ export default class {
                 delete cqrs.fxData.export[alias];
               }
               delete cqrs.fxData.alias[alias];
-              this.logDebug('delete ' + alias);
+              logger.trace('delete ' + alias);
             }
           }
         }
@@ -293,19 +295,13 @@ export default class {
                 delete thinkData.export[alias];
               }
               delete thinkData.alias[alias];
-              this.logDebug('delete ' + alias);
+              logger.trace('delete ' + alias);
             }
           }
         }
       }
     }
     // todo
-  }
-
-  logDebug(...args) {
-    if (this.debugOutput) {
-      logger.debug(...args);
-    }
   }
 
   load() {
@@ -411,12 +407,7 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(this.module.map(name => ({
-        name,
-        version: this.moduleConfigs[name].version,
-        installDate: new Date(),
-        status: 'waitCommit'
-      })));
+      await Installs.save(this.module.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
       await Installs.setInstallMode('migrate');
       // 升级数据
       await orm.migrate(this.module);
@@ -456,12 +447,7 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(this.module.map(name => ({
-        name,
-        version: this.moduleConfigs[name].version,
-        installDate: new Date(),
-        status: 'waitCommit'
-      })));
+      await Installs.save(this.module.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
       await Installs.setInstallMode('resource');
       // 之前可能已经安装过，但是卸载后会保留数据表，需要备份
       await orm.backup(this.module);
@@ -486,7 +472,7 @@ export default class {
   }
 
   captureError() {
-    process.on('uncaughtException', function (err) {
+    process.on('uncaughtException', function(err) {
       var msg = err.message || err;
       if (msg.toString().indexOf(' EADDRINUSE ') > -1) {
         logger.warn(err);
@@ -495,7 +481,7 @@ export default class {
         logger.error(err);
       }
     });
-    process.on('unhandledRejection', function (err) {
+    process.on('unhandledRejection', function(err) {
       logger.error(err);
     });
   }
@@ -520,10 +506,7 @@ export default class {
     // 连接查询库
     await orm.connect(this.querydb);
     // 出事话cqrs
-    cqrs.init({
-      eventmq: this.eventmq,
-      eventdb: this.eventdb
-    })
+    cqrs.init({eventmq: this.eventmq, eventdb: this.eventdb})
     // 重置
     this.moduleConfigs = {};
   }

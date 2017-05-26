@@ -27,12 +27,12 @@ function toObject(obj) {
 
 function readFileJson(filename, valueFormater = toObject) {
   let file = path.normalize(getDb() + path.sep + filename);
-  logger.debug(i18n.t('开始读取文件') + file);
+  logger.trace(i18n.t('开始读取文件') + file);
   if (fs.existsSync(file)) {
     try {
       return valueFormater(JSON.parse(fs.readFileSync(file)));
     } catch (err) {
-      logger.debug(i18n.t('读取文件失败，跳过'), err);
+      logger.trace(i18n.t('读取文件失败，跳过'), err);
       return valueFormater();
     }
   } else {
@@ -47,11 +47,11 @@ function saveJsonFile(filename, json) {
   for (let dir of ps) {
     p = path.join(p, dir);
     if (!fs.existsSync(p)) {
-      logger.debug(i18n.t('开始创建目录') + p);
+      logger.trace(i18n.t('开始创建目录') + p);
       fs.mkdirSync(p);
     }
   }
-  logger.debug(i18n.t('开始写入文件') + file);
+  logger.trace(i18n.t('开始写入文件') + file);
   fs.writeFileSync(file, JSON.stringify(json, null, 2));
 }
 

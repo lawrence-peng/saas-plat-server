@@ -3,20 +3,11 @@ import * as cqrsCore from 'cqrs-fx/lib/core';
 import * as cqrsEvent from 'cqrs-fx/lib/event';
 import * as cqrsBus from 'cqrs-fx/lib/bus';
 import config from 'cqrs-fx/lib/config';
-import {
-  getDecoratorToken
-} from 'cqrs-fx/lib/event/decorator';
+import {getDecoratorToken} from 'cqrs-fx/lib/event/decorator';
 import Installs from './util/installs';
 import logger from './util/log';
 import i18n from './util/i18n';
-import {
-  cmpVer,
-  lastChild
-} from './util/cmp';
-
-import {
-  getModuleVersion
-} from './util/modulever';
+import {cmpVer, lastChild} from './util/cmp';
 
 const _dirname = {
   migration: 'migration'
@@ -57,9 +48,7 @@ const init = (cfg) => {
 // 重溯B时需要连带C的事件，所以这里需要计算modules的所有依赖模块
 const caluModules = (modules) => {
   const calus = [...modules];
-  Object.keys(cqrsCore.fxData.alias).filter(item =>
-    item.indexOf(`/event/`) > -1 && modules.indexOf(item.split('/')[0]) > -1).map(alias =>
-    cqrsCore._require(alias)).forEach((type) => {
+  Object.keys(cqrsCore.fxData.alias).filter(item => item.indexOf(`/event/`) > -1 && modules.indexOf(item.split('/')[0]) > -1).map(alias => cqrsCore._require(alias)).forEach((type) => {
     let ctoken = getDecoratorToken(type);
     if (!ctoken.name && !ctoken.module) {
       if (!type.prototype) {
@@ -79,7 +68,7 @@ const caluModules = (modules) => {
       }
       let {
         module = ctoken.module,
-          name = p
+        name = p
       } = getDecoratorToken(type.prototype[p]);
       if (module && name) {
         if (calus.indexOf(module) == -1) {
@@ -118,7 +107,7 @@ const createListener = (total, progressCallback) => {
     } else if (code == 'ok') {
       logger.info(i18n.t('回溯事件完成'), module + '/' + name, id);
     } else {
-      logger.info(i18n.t('回溯事件失败'), module + '/' + name, id, code, error);
+      logger.warn(i18n.t('回溯事件失败'), module + '/' + name, id, code, error || '');
       // 回溯是不允许失败的，必须保证所有已经发生的业务都被执行
       throw new Error(error);
     }
@@ -198,10 +187,10 @@ const up = async(Migration) => {
 
 const revertVersion = async() => {
   const eventStorage = cqrsEvent.getStorage().eventStorage;
-  const lastEvent = await eventStorage.first({}, {
-    timestamp: 1
-  });
-  await Installs.setRevertVersion(lastEvent ? lastEvent.timestamp : new Date());
+  const lastEvent = await eventStorage.first({}, {timestamp: 1});
+  await Installs.setRevertVersion(lastEvent
+    ? lastEvent.timestamp
+    : new Date());
 }
 
 const migrate = async(modules, progressCallback) => {
@@ -218,8 +207,7 @@ const migrate = async(modules, progressCallback) => {
     };
     const current = lastChild(await Installs.find(module, 'waitCommit'));
     if (current) {
-      migrations[module] = Object.keys(cqrsCore.fxData.alias).filter(item =>
-        item.indexOf(`${module}/${_dirname.migration}/`) > -1).filter(item => {
+      migrations[module] = Object.keys(cqrsCore.fxData.alias).filter(item => item.indexOf(`${module}/${_dirname.migration}/`) > -1).filter(item => {
         const sp = item.split('/');
         // 大于已安装版本， 并且小于等于当前程序版本
         return cmpVer(sp[2], last.version) > 0 && cmpVer(sp[2], current.version) <= 0;
@@ -234,19 +222,13 @@ const migrate = async(modules, progressCallback) => {
     }
   }
   logger.info(i18n.t('预计迁移命令') + ' ' + total);
-  invoke(progressCallback, {
-    total,
-    current
-  });
+  invoke(progressCallback, {total, current});
   for (const module of modules) {
     const ups = migrations[module];
     for (var i of ups) {
       current++;
       await up(cqrsCore._require(i));
-      invoke(progressCallback, {
-        total,
-        current
-      });
+      invoke(progressCallback, {total, current});
       logger.info(i18n.t('已执行迁移') + ' ' + Math.floor(current * 100.0 / total) + '%');
     }
   }
@@ -263,17 +245,15 @@ const backMigrate = async() => {
     version: {
       $gt: revertVersion
     }
-  }, {
-    force: true
-  });
+  }, {force: true});
   await Installs.setRevertVersion(null);
   return true;
 }
 
 export default {
   init,
-  fxData: cqrsCore.fxData,
-  alias: cqrsCore.alias,
+  fxData : cqrsCore.fxData,
+  alias : cqrsCore.alias,
   resource,
   migrate,
   revertVersion,
