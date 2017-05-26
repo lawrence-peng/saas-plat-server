@@ -1,13 +1,13 @@
 var thinkjs = require('thinkjs');
 var path = require('path');
 
-var rootPath = path.dirname(__dirname) + path.sep + 'thinkjs';
+var rootPath = __dirname + path.sep + 'mvc';
 
 var instance = new thinkjs({
-  APP_PATH: rootPath + path.sep + 'app',
+  APP_PATH: rootPath ,
   RUNTIME_PATH: path.dirname(__dirname) + path.sep + 'runtime',
   ROOT_PATH: rootPath,
-  RESOURCE_PATH: rootPath + path.sep + 'www',
+  RESOURCE_PATH: path.dirname(__dirname) + path.sep + 'www',
   env: 'production' //'development'
 });
 

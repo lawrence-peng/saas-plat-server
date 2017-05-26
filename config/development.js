@@ -1,4 +1,4 @@
-var app = require('../app').default;
+var app = require('../lib').default;
 var path = require('path');
 var fs = require('fs');
 
@@ -13,7 +13,7 @@ if (fs.existsSync(configfile)) {
 
 // load app module
 var instance = new app({
-  appPath: path.join(process.cwd(), 'node_modules'), 
+  appPath: path.join(process.cwd(), 'node_modules'),
   devPath:  process.cwd() ,
   // 模块配置文件
   modules: config.modules || 'saas-plat-*',

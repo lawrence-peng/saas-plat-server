@@ -33,10 +33,10 @@ output.tar.gz
 
 
 runtime/
-/app
-/thinkjs/app
+/lib
 
 /demo/**/app
 
 /test/data
 /test/**/app
+www/

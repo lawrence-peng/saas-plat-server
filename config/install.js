@@ -1,5 +1,5 @@
 require('babel-polyfill');
-var app = require('../app').default;
+var app = require('../lib').default;
 var path = require('path');
 var fs = require('fs');
 
