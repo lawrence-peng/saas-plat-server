@@ -86,7 +86,7 @@ export default {
         item.status = 'install';
       }
     });
-    this.saveJsonFile(INSTALLS, _items);
+    saveJsonFile(INSTALLS, _items);
   },
 
   rollback: (modules) => {

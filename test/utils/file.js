@@ -1,11 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 
-export var copy = function(src, dst) {
+export var copy = function (src, dst) {
   // 读取目录中的所有文件/目录
   var paths = fs.readdirSync(src);
 
-  paths.forEach(function(path) {
+  paths.forEach(function (path) {
     var _src = src + '/' + path,
       _dst = dst + '/' + path,
       readable,
@@ -30,8 +30,8 @@ export var copy = function(src, dst) {
 
 };
 // 在复制目录前需要判断该目录是否存在，不存在需要先创建目录
-export var exists = function(src, dst, callback) {
-  var exists = fs.existsSync(dst,);
+export var exists = function (src, dst, callback) {
+  var exists = fs.existsSync(dst, );
   // 已存在
   if (exists) {
     callback(src, dst // 不存在
@@ -50,7 +50,7 @@ export var exists = function(src, dst, callback) {
 
 };
 
-export const deleteFolderRecursive = function(path) {
+export const deleteFolderRecursive = function (path) {
 
   var files = [];
 
@@ -58,7 +58,7 @@ export const deleteFolderRecursive = function(path) {
 
     files = fs.readdirSync(path);
 
-    files.forEach(function(file, index) {
+    for (var file of files) {
 
       var curPath = path + "/" + file;
 
@@ -72,7 +72,7 @@ export const deleteFolderRecursive = function(path) {
 
       }
 
-    });
+    }
 
     fs.rmdirSync(path);
 

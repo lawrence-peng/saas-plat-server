@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import Sequelize from 'sequelize'; // orm
 import i18n from './i18n';
+import logger from './log';
 import Installs from './util/installs';
 import {
   cmpVer,
@@ -78,7 +79,7 @@ let _safeRequire = file => {
   try {
     return _interopSafeRequire(file);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
   }
   return null;
 };
@@ -147,7 +148,7 @@ const get = (module, name) => {
   if (!module) {
     throw new Error(i18n.t('查询对象未找到，模块未知'));
   }
-  const modelName = module + '/' + _dirname.model + '/' + name;
+  const modelName = _data.alias[`${module}/model/${name}`];
   if (modelName in _data.defines) {
     return _data.defines[modelName];
   }
@@ -158,7 +159,7 @@ const get = (module, name) => {
       modelInst.options() : {});
     return _data.defines[modelName];
   } catch (e) {
-    console.warn(e);
+    logger.warn(e);
     throw new Error(i18n.t('查询对象不存在'));
   }
 }
@@ -174,7 +175,7 @@ const createModel = async(Model, force = false) => {
       force
     });
     // todo 执行升级脚本
-    console.log(`表${model.name}已创建或更新.`);
+    logger.info(model.name + i18n.t('表已创建或更新'));
   }
 };
 
@@ -191,20 +192,26 @@ const createModels = async(model, force = false) => {
 };
 
 const create = async(modules, name, force = false) => {
+  logger.info(i18n.t('开始重建数据表...'));
   for (let module of modules) {
     if (name) {
-      await createModel(_require(`${module}/${_dirname.model}/${name}`), force);
+      await createModel(_require(`${module}/model/${name}`), force);
     } else {
+      if (Object.keys(_data.alias).length<=0){
+        logger.warn(i18n.t('未加载任何模型定义'));
+      }
       for (var i in _data.alias) {
-        if (i.indexOf(`${module}/${_dirname.model}/`) > -1) {
+        if (i.indexOf(`${module}/model/`) > -1) {
           await createModel(_require(i), force);
         }
       }
     }
   }
+  logger.info(i18n.t('重建数据表完成'));
 };
 
 const drop = async(modules) => {
+  logger.info(i18n.t('开始销毁数据表...'));
   const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   for (let name of tableNames) {
@@ -212,9 +219,11 @@ const drop = async(modules) => {
       await queryInterface.dropTable(name);
     }
   }
+  logger.info(i18n.t(`销毁数据表完成`));
 }
 
 const backup = async(modules) => {
+  logger.info(i18n.t(`开始备份数据表...`));
   const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   for (let name of tableNames) {
@@ -226,6 +235,7 @@ const backup = async(modules) => {
       await queryInterface.renameTable(name, name + '__bak');
     }
   }
+  logger.info(i18n.t(`备份数据表完成`));
 }
 
 const removeBackup = async(modules) => {
@@ -241,6 +251,7 @@ const removeBackup = async(modules) => {
 }
 
 const restore = async(modules, force = false) => {
+  logger.info(i18n.t(`开始恢复备份数据表..`));
   const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   for (let name of tableNames) {
@@ -258,6 +269,7 @@ const restore = async(modules, force = false) => {
       }
     }
   }
+  logger.info(i18n.t(`恢复备份数据表完成`));
 }
 
 const up = async(Migration, queryInterface) => {
@@ -276,9 +288,10 @@ const migrate = async(modules, revert = false) => {
   const migrations = Object.keys(_data.alias).filter(item =>
     item.indexOf(`${module}/${_dirname.migration}/`)).sort(cmpVer);
   if (revert) {
+    logger.info(i18n.t(`开始回退迁移数据..`));
     for (let module of modules) {
-      const last = last(await Installs.find(module, 'install'));
-      const current = last(await Installs.find(module, 'waitCommit'));
+      const last = lastChild(await Installs.find(module, 'install'));
+      const current = lastChild(await Installs.find(module, 'waitCommit'));
       if (!current || !last) {
         return;
       }
@@ -295,12 +308,13 @@ const migrate = async(modules, revert = false) => {
       }
     }
   } else {
+    logger.info(i18n.t(`开始迁移数据..`));
     for (let module of modules) {
       const last = await Installs.find(module, 'install') || {
         name: module,
         version: '0.0.0'
       };
-      const current = last(await Installs.find(module, 'waitCommit'));
+      const current = lastChild(await Installs.find(module, 'waitCommit'));
       if (!current) {
         return;
       }
@@ -317,6 +331,7 @@ const migrate = async(modules, revert = false) => {
       }
     }
   }
+  logger.info(i18n.t(`迁移数据完成`));
 }
 
 const connect = async(querydb) => {
@@ -325,9 +340,9 @@ const connect = async(querydb) => {
   }
   let {
     database = 'saasplat_querys',
-    username = 'root',
-    password = '',
-    ...options
+      username = 'root',
+      password = '',
+      ...options
   } = querydb;
   _data.db = new Sequelize(database, username, password, options);
   // 检查是否能连接

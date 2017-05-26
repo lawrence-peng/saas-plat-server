@@ -21,6 +21,7 @@ describe('业务', function () {
 
     //utils.deleteFolderRecursive(__dirname + '/data/' + id);
 
+    utils.deleteFolderRecursive(__dirname + '/data/' + id);
     utils.exists(__dirname + '/module1', __dirname + '/data/' + id + '/module1', utils.copy);
 
     saasplat.appPath = path.normalize(__dirname + '/data/' + id);
@@ -108,7 +109,7 @@ describe('业务', function () {
     let id = 'cqrs_test2';
 
     //utils.deleteFolderRecursive(__dirname + '/data/' + id);
-
+    utils.deleteFolderRecursive(__dirname + '/data/' + id);
     utils.exists(__dirname + '/module1', __dirname + '/data/' + id + '/module1', utils.copy);
 
     saasplat.appPath = path.normalize(__dirname + '/data/' + id);

@@ -14,7 +14,7 @@ describe('数据', function() {
     await queryInterface.dropAllTables();
     expect(await queryInterface.showAllTables()).to.be.empty;
 
-    orm.alias('module1/model', path.join(__dirname, 'module1/app/model'));
+    orm.alias('module1/model', path.join(__dirname, 'module1/src/model'));
 
     expect(orm.alias()).to.have.property('module1/model/account');
 

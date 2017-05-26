@@ -368,7 +368,6 @@ export default class {
   // 回退上次安装或升级失败
   async rollback() {
     await this.init();
-    await this.init();
     this.loadModule();
     this.loadORM(true);
     this.loadCQRS(true);
@@ -406,6 +405,10 @@ export default class {
     this.loadORM(true);
     this.loadCQRS(true);
     this.loadConfig();
+
+    if (!this.module || this.module.length <= 0) {
+      logger.warn(i18n.t('未加载任何模块'));
+    }
 
     try {
       // 记录
@@ -447,6 +450,10 @@ export default class {
     this.loadORM(true);
     this.loadCQRS(true);
     this.loadConfig();
+
+    if (!this.module || this.module.length <= 0) {
+      logger.warn(i18n.t('未加载任何模块'));
+    }
 
     try {
       // 记录
@@ -510,6 +517,7 @@ export default class {
     if (this.debugMode) {
       logger.log('saasplat debug mode');
     }
+    this.clearData();
     // 连接查询库
     await orm.connect(this.querydb);
     // 出事话cqrs

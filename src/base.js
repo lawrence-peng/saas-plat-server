@@ -243,14 +243,14 @@ saasplat.model.get = (name, module) => {
     throw new Error(i18n.t('查询对象未找到'));
   }
   if (!module) {
-    const mn = name.split(path.sep);
+    const mn = name.split('/');
     if (mn.length == 2) {
       module = mn[0];
       name = mn[1];
     }
   }
   if (!module) {
-    throw new Error(i18n.t('查询对象未找到，模块未知'));
+    throw new Error(name + i18n.t('查询对象未找到，模块未知'));
   }
   return orm.get(module, name);
 };
