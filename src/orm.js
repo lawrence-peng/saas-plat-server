@@ -4,7 +4,10 @@ import Sequelize from 'sequelize'; // orm
 import i18n from './util/i18n';
 import logger from './util/log';
 import Installs from './util/installs';
-import {cmpVer, lastChild} from './util/cmp';
+import {
+  cmpVer,
+  lastChild
+} from './util/cmp';
 
 const _data = {
   alias: {},
@@ -25,8 +28,8 @@ const getFiles = (file) => {
     for (var fi of files) {
       if (fs.statSync(path.join(file, fi)).isFile())
         dirs.push(fi);
-      }
     }
+  }
   return dirs;
 };
 
@@ -151,11 +154,11 @@ const get = (module, name) => {
   }
   try {
     const modelInst = new _require(modelName);
-    _data.defines[modelName] = define(module, name, typeof modelInst.schame == 'function'
-      ? modelInst.schame()
-      : {}, typeof modelInst.schame == 'function'
-      ? modelInst.options()
-      : {});
+    _data.defines[modelName] = define(module, name, typeof modelInst.schame == 'function' ?
+      modelInst.schame() :
+      {}, typeof modelInst.schame == 'function' ?
+      modelInst.options() :
+      {});
     return _data.defines[modelName];
   } catch (e) {
     logger.warn(e);
@@ -165,14 +168,16 @@ const get = (module, name) => {
 
 const createModel = async(Model, force = false) => {
   const modelInst = new Model;
-  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function'
-    ? modelInst.schame()
-    : {}, typeof modelInst.options == 'function'
-    ? modelInst.options()
-    : {});
+  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function' ?
+    modelInst.schame() :
+    {}, typeof modelInst.options == 'function' ?
+    modelInst.options() :
+    {});
   if (model) {
     // force = drop and create
-    await model.sync({force});
+    await model.sync({
+      force
+    });
     // todo 执行升级脚本
     logger.info(i18n.t('表已创建'), model.name);
   }
@@ -224,14 +229,17 @@ const backup = async(modules) => {
   logger.info(i18n.t(`开始备份数据表...`));
   const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
+  if (tableNames.length <= 0) {
+    logger.info(i18n.t(`无数据表需要备份`));
+  }
   for (let name of tableNames) {
     if (!modules || modules.indexOf(name.split('_')[0]) > -1) {
       if (name.endsWith('__bak')) {
-        logger.info(i18n.t(`删除历史备份`) + name);
+        logger.info(i18n.t(`删除历史备份`), name);
         await queryInterface.dropTable(name);
         continue;
       }
-      logger.info(i18n.t(`备份数据表`) + name);
+      logger.info(i18n.t(`备份数据表`), name);
       await queryInterface.renameTable(name, name + '__bak');
     }
   }
@@ -244,7 +252,7 @@ const removeBackup = async(modules) => {
   tableNames.forEach(name => {
     if (!modules || (name.split('_')[0] in modules)) {
       if (name.endsWith('__bak')) {
-        logger.info(i18n.t(`删除历史备份`) + name);
+        logger.info(i18n.t(`删除历史备份`), name);
         queryInterface.dropTable(name);
       }
     }
@@ -261,13 +269,13 @@ const restore = async(modules, force = false) => {
         const tblName = name.substr(0, name.length - 5);
         if (tableNames.indexOf(tblName) > -1) {
           if (force) {
-            logger.info(i18n.t(`删除数据表`) + tblName);
+            logger.info(i18n.t(`删除数据表`), tblName);
             await queryInterface.dropTable(tblName);
           } else {
             throw new Error(i18n.t('数据表已经存在', tblName));
           }
         }
-        logger.info(i18n.t(`回复备份`) + tblName);
+        logger.info(i18n.t(`回复备份`), tblName);
         await queryInterface.renameTable(name, tblName);
       }
     }
@@ -344,9 +352,9 @@ const connect = async(querydb) => {
   }
   let {
     database = 'saasplat_querys',
-    username = 'root',
-    password = '',
-    ...options
+      username = 'root',
+      password = '',
+      ...options
   } = querydb;
   _data.db = new Sequelize(database, username, password, options);
   // 检查是否能连接
@@ -357,8 +365,8 @@ const TYPE = Sequelize; // 类型使用Sequelize
 
 export default {
   alias,
-  require : _require,
-  data : _data,
+  require: _require,
+  data: _data,
   drop,
   get,
   define,

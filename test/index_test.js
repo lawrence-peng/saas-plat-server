@@ -2,7 +2,7 @@ import {
   expect
 } from 'chai';
 import path from 'path';
-import App from '../src';
+import App from '../src/app';
 import * as utils from './utils/file';
 import {
   querydb,
@@ -43,13 +43,16 @@ describe('应用', function () {
     expect(await instance.rollback()).to.be.true;
     expect(await instance.resource()).to.be.true;
 
-    saasplat.command.publish({
-      type: 'module1/createAccount',
+    await saasplat.command.publish({
+      name: 'module1/createAccount',
       data: {
         userName: 'aaa',
         password: '123'
       }
     });
+
+    let aaa = await saasplat.model.get('module1/account').findById('aaa');
+    expect(aaa).to.not.be.null;
 
     utils.copy(path.normalize(path.join(__dirname, 'module1_updatefiles_1.0.1')), path.normalize(path.join(__dirname, 'data/' + id + '/module1')));
 
@@ -60,12 +63,13 @@ describe('应用', function () {
     expect(await instance.migrate()).to.be.true;
 
     // 也去迁移代码1.0.2执行设置了默认QQ
-    const aaa = await saasplat.model.get('module1/account').findOne({
+    aaa = await saasplat.model.get('module1/account').findOne({
       where: {
         id: 'aaa'
       }
     });
-  //  console.log(aaa)
+    expect(aaa).to.not.be.null;
+    //  console.log(aaa)
     expect(aaa.QQ).to.be.equal('noqq');
 
     // QQ字段增加

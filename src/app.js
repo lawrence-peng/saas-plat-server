@@ -4,12 +4,16 @@ import assert from 'assert';
 import glob from 'glob';
 
 import mvc from './mvc';
-import {app as mvcInstance} from './mvc';
+import {
+  app as mvcInstance
+} from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
-import {init as logInit} from './util/log';
+import {
+  init as logInit
+} from './util/log';
 import logger from './util/log';
 import i18n from './util/i18n';
 import Installs from './util/installs';
@@ -64,6 +68,10 @@ export default class {
     this.eventmq = eventmq;
     logInit(log);
     logLevel && logger.setLevel(logLevel);
+    if (this.module) {
+      logger.info(i18n.t('模块加载完成'), this.module.length);
+      logger.trace(this.module);
+    }
   }
 
   _getPath(module, type) {
@@ -105,16 +113,19 @@ export default class {
 
   loadModule() {
     if (this.module) {
-      logger.info(i18n.t('加载模块完成'), this.module);
       return;
     }
-    let devModules = this.devPath
-      ? glob.sync(this.devGlob, {cwd: this.devPath})
-      : [];
-    let appModules = glob.sync(this.glob, {cwd: this.appPath}).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
+    let devModules = this.devPath ?
+      glob.sync(this.devGlob, {
+        cwd: this.devPath
+      }) : [];
+    let appModules = glob.sync(this.glob, {
+      cwd: this.appPath
+    }).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
     this.module = appModules.concat(devModules);
-    logger.info(i18n.t('加载模块完成'), this.module);
+    logger.info(i18n.t('模块加载完成'), this.module.length);
+    logger.trace(this.module);
   }
 
   // 加载扩展的模板
@@ -220,11 +231,11 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    const devModules = glob.sync(this.devPath
-      ? this.devGlob
-      : this.glob, {
-      cwd: this.devPath || this.appPath
-    })
+    const devModules = glob.sync(this.devPath ?
+      this.devGlob :
+      this.glob, {
+        cwd: this.devPath || this.appPath
+      })
     let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
     instance.run();
 
@@ -357,7 +368,7 @@ export default class {
     for (let name in boots.data.alias) {
       boots.require(boots.data.alias[name]);
     }
-    logger.log(i18n.t('预加载程序包完成'), 'PRELOAD', startTime);
+    logger.info(i18n.t('预加载程序包完成'), 'PRELOAD', startTime);
   }
 
   // 回退上次安装或升级失败
@@ -369,20 +380,20 @@ export default class {
     this.loadConfig();
 
     if (await Installs.has('waitCommit')) {
-      logger.log(i18n.t('开始回滚安装失败模块'));
+      logger.info(i18n.t('开始回滚安装失败模块'));
       await cqrs.backMigrate();
       if (await Installs.getInstallMode() == 'resouce') {
-        logger.log(i18n.t('恢复数据库快速表备份'));
+        logger.info(i18n.t('恢复数据库快速表备份'));
         await orm.restore(this.module);
       } else {
         //await cqrs.migrate(this.module, true);
-        logger.log(i18n.t('回退数据库迁移'));
+        logger.info(i18n.t('回退数据库迁移'));
         await orm.migrate(this.module, true);
       }
       await Installs.rollback(this.module);
-      logger.log(i18n.t('回滚失败模块完成'));
+      logger.info(i18n.t('回滚失败模块完成'));
     } else {
-      logger.log(i18n.t('无回滚任务'));
+      logger.info(i18n.t('无回滚任务'));
     }
 
     return true;
@@ -407,7 +418,12 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(this.module.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
+      await Installs.save(this.module.map(name => ({
+        name,
+        version: this.moduleConfigs[name].version,
+        installDate: new Date(),
+        status: 'waitCommit'
+      })));
       await Installs.setInstallMode('migrate');
       // 升级数据
       await orm.migrate(this.module);
@@ -447,7 +463,12 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(this.module.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
+      await Installs.save(this.module.map(name => ({
+        name,
+        version: this.moduleConfigs[name].version,
+        installDate: new Date(),
+        status: 'waitCommit'
+      })));
       await Installs.setInstallMode('resource');
       // 之前可能已经安装过，但是卸载后会保留数据表，需要备份
       await orm.backup(this.module);
@@ -472,7 +493,7 @@ export default class {
   }
 
   captureError() {
-    process.on('uncaughtException', function(err) {
+    process.on('uncaughtException', function (err) {
       var msg = err.message || err;
       if (msg.toString().indexOf(' EADDRINUSE ') > -1) {
         logger.warn(err);
@@ -481,7 +502,7 @@ export default class {
         logger.error(err);
       }
     });
-    process.on('unhandledRejection', function(err) {
+    process.on('unhandledRejection', function (err) {
       logger.error(err);
     });
   }
@@ -500,13 +521,16 @@ export default class {
       logger.warn('eventmq未进行配置，启用默认配置');
     }
     if (this.debugMode) {
-      logger.log('saasplat debug mode');
+      logger.info('saasplat debug mode');
     }
     this.clearData();
     // 连接查询库
     await orm.connect(this.querydb);
     // 出事话cqrs
-    cqrs.init({eventmq: this.eventmq, eventdb: this.eventdb})
+    cqrs.init({
+      eventmq: this.eventmq,
+      eventdb: this.eventdb
+    })
     // 重置
     this.moduleConfigs = {};
   }
