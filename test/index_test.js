@@ -36,18 +36,21 @@ describe('应用', function () {
       querydb,
       eventmq,
       eventdb,
+      debug: true,
       logLevel: 'DEBUG'
     });
+    await instance.init();
+    await instance.clearEvents();
     instance.compile();
     // 新模块都必须采用回溯方式安装
-    expect(await instance.rollback()).to.be.true;
+    expect(await instance.rollback(true)).to.be.true;
     expect(await instance.resource()).to.be.true;
 
     await saasplat.command.publish({
       name: 'module1/createAccount',
       data: {
         userName: 'aaa',
-        password: '123'
+        password: '123456'
       }
     });
 

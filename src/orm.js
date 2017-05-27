@@ -155,10 +155,8 @@ const get = (module, name) => {
   try {
     const modelInst = new _require(modelName);
     _data.defines[modelName] = define(module, name, typeof modelInst.schame == 'function' ?
-      modelInst.schame() :
-      {}, typeof modelInst.schame == 'function' ?
-      modelInst.options() :
-      {});
+      modelInst.schame() : {}, typeof modelInst.schame == 'function' ?
+      modelInst.options() : {});
     return _data.defines[modelName];
   } catch (e) {
     logger.warn(e);
@@ -169,10 +167,8 @@ const get = (module, name) => {
 const createModel = async(Model, force = false) => {
   const modelInst = new Model;
   const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function' ?
-    modelInst.schame() :
-    {}, typeof modelInst.options == 'function' ?
-    modelInst.options() :
-    {});
+    modelInst.schame() : {}, typeof modelInst.options == 'function' ?
+    modelInst.options() : {});
   if (model) {
     // force = drop and create
     await model.sync({
@@ -228,20 +224,17 @@ const drop = async(modules) => {
 const backup = async(modules) => {
   logger.debug(i18n.t(`开始备份数据表...`));
   const queryInterface = _data.db.getQueryInterface();
-  const tableNames = await queryInterface.showAllTables();
+  const tableNames = await queryInterface.showAllTables().filter(name => modules.indexOf(name.split('_')[0]) > -1);
   if (tableNames.length <= 0) {
     logger.debug(i18n.t(`无数据表需要备份`));
   }
-  for (let name of tableNames) {
-    if (!modules || modules.indexOf(name.split('_')[0]) > -1) {
-      if (name.endsWith('__bak')) {
-        logger.debug(i18n.t(`删除历史备份`), name);
-        await queryInterface.dropTable(name);
-        continue;
-      }
-      logger.debug(i18n.t(`备份数据表`), name);
-      await queryInterface.renameTable(name, name + '__bak');
-    }
+  for (let name of tableNames.filter(name => name.endsWith('__bak'))) {
+    logger.debug(i18n.t(`删除历史备份`), name);
+    await queryInterface.dropTable(name);
+  }
+  for (let name of tableNames.filter(name => !name.endsWith('__bak'))) {
+    logger.debug(i18n.t(`备份数据表`), name);
+    await queryInterface.renameTable(name, name + '__bak');
   }
   logger.debug(i18n.t(`备份数据表完成`));
 }
@@ -249,14 +242,14 @@ const backup = async(modules) => {
 const removeBackup = async(modules) => {
   const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
-  tableNames.forEach(name => {
+  for (const name of tableNames) {
     if (!modules || (name.split('_')[0] in modules)) {
       if (name.endsWith('__bak')) {
         logger.debug(i18n.t(`删除历史备份`), name);
-        queryInterface.dropTable(name);
+        await queryInterface.dropTable(name);
       }
     }
-  });
+  }
 }
 
 const restore = async(modules, force = false) => {
@@ -269,7 +262,7 @@ const restore = async(modules, force = false) => {
         const tblName = name.substr(0, name.length - 5);
         if (tableNames.indexOf(tblName) > -1) {
           if (force) {
-            logger.debug(i18n.t(`删除数据表`), tblName);
+            logger.debug(i18n.t(`删除已有数据表`), tblName);
             await queryInterface.dropTable(tblName);
           } else {
             throw new Error(i18n.t('数据表已经存在', tblName));

@@ -1,17 +1,26 @@
 import * as cqrs from 'cqrs-fx';
 import * as cqrsCore from 'cqrs-fx/lib/core';
 import * as cqrsEvent from 'cqrs-fx/lib/event';
+import * as cqrsSnapshot from 'cqrs-fx/lib/snapshot';
 import * as cqrsBus from 'cqrs-fx/lib/bus';
+import MqWorker from 'cqrs-fx/lib/bus/mq_worker';
 import config from 'cqrs-fx/lib/config';
-import {getDecoratorToken} from 'cqrs-fx/lib/event/decorator';
+import {
+  getDecoratorToken
+} from 'cqrs-fx/lib/event/decorator';
 import Installs from './util/installs';
 import logger from './util/log';
 import i18n from './util/i18n';
-import {cmpVer, lastChild} from './util/cmp';
+import {
+  cmpVer,
+  lastChild
+} from './util/cmp';
 
 const _dirname = {
   migration: 'migration'
 };
+
+let worker;
 
 const init = (cfg) => {
   config.init({
@@ -23,7 +32,8 @@ const init = (cfg) => {
         port: 6379,
         host: 'localhost',
         ...cfg.eventmq
-      }
+      },
+      ...cfg.bus
     },
     event: {
       storage: 'mongo_domain_event',
@@ -40,8 +50,36 @@ const init = (cfg) => {
     mongo: {
       url: 'mongodb://localhost:27017/cqrs',
       ...cfg.eventdb
+    },
+    log: {
+      enable: cfg.debug
     }
   });
+}
+
+const run = () => {
+  const listener = ({
+    module,
+    name,
+    type,
+    handler
+  }, code, error) => {
+    if (!code) {
+      // todo
+    } else if (code == 'ok') {
+
+    } else {
+
+    }
+  }
+
+  worker = new MqWorker('command');
+  cqrs.bus.getCommandDispatcher().addListener(listener, listener, listener);
+}
+
+const clear = async ()=>{
+  await cqrsSnapshot.getStorage().drop();
+  await cqrsEvent.getStorage().eventStorage.drop();
 }
 
 // A <- B <- C <- D
@@ -68,7 +106,7 @@ const caluModules = (modules) => {
       }
       let {
         module = ctoken.module,
-        name = p
+          name = p
       } = getDecoratorToken(type.prototype[p]);
       if (module && name) {
         if (calus.indexOf(module) == -1) {
@@ -187,10 +225,12 @@ const up = async(Migration) => {
 
 const revertVersion = async() => {
   const eventStorage = cqrsEvent.getStorage().eventStorage;
-  const lastEvent = await eventStorage.first({}, {timestamp: 1});
-  await Installs.setRevertVersion(lastEvent
-    ? lastEvent.timestamp
-    : new Date());
+  const lastEvent = await eventStorage.first({}, {
+    timestamp: 1
+  });
+  await Installs.setRevertVersion(lastEvent ?
+    lastEvent.timestamp :
+    new Date());
 }
 
 const migrate = async(modules, progressCallback) => {
@@ -222,13 +262,19 @@ const migrate = async(modules, progressCallback) => {
     }
   }
   logger.debug(i18n.t('预计迁移命令') + ' ' + total);
-  invoke(progressCallback, {total, current});
+  invoke(progressCallback, {
+    total,
+    current
+  });
   for (const module of modules) {
     const ups = migrations[module];
     for (var i of ups) {
       current++;
       await up(cqrsCore._require(i));
-      invoke(progressCallback, {total, current});
+      invoke(progressCallback, {
+        total,
+        current
+      });
       logger.debug(i18n.t('已执行迁移') + ' ' + Math.floor(current * 100.0 / total) + '%');
     }
   }
@@ -245,15 +291,19 @@ const backMigrate = async() => {
     version: {
       $gt: revertVersion
     }
-  }, {force: true});
+  }, {
+    force: true
+  });
   await Installs.setRevertVersion(null);
   return true;
 }
 
 export default {
   init,
-  fxData : cqrsCore.fxData,
-  alias : cqrsCore.alias,
+  run,
+  clear,
+  fxData: cqrsCore.fxData,
+  alias: cqrsCore.alias,
   resource,
   migrate,
   revertVersion,

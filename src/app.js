@@ -79,18 +79,16 @@ export default class {
     if (think.mode === think.mode_module) {
       mod = module + path.sep;
     }
-    let subPath;
+    let subPath = 'app';
     if (!this.moduleConfigs) {
       this.moduleConfigs = {};
     }
-    if (this.moduleConfigs[module]) {
-      subPath = this.moduleConfigs[module].main;
-    } else {
+    let config = this.moduleConfigs[module];
+    if (!this.moduleConfigs[module]) {
       let searchPath = this.appPath;
       if (this.devModules.indexOf(module) > -1) {
         searchPath = this.devPath;
       }
-      let config;
       // package可以配置main文件夹，默认app
       let packagefile = path.join(searchPath, module, 'package.json');
       if (fs.existsSync(packagefile)) {
@@ -104,11 +102,13 @@ export default class {
         config = {};
       }
       this.moduleConfigs[module] = config;
-      subPath = config.main && !config.main.endsWith('.js') && config.main;
+    }
+    if ((typeof config.main == 'string') && !config.main.endsWith('.js')) {
+      subPath = config.main;
     }
     return `${this.devModules.indexOf(module) > -1
       ? this.devPath
-      : this.appPath}${path.sep}${mod}${subPath || 'app'}${path.sep}${type}`;
+      : this.appPath}${path.sep}${mod}${subPath}${path.sep}${type}`;
   }
 
   loadModule() {
@@ -238,7 +238,6 @@ export default class {
       })
     let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
     instance.run();
-
     mvcInstance.compile(options);
   }
 
@@ -297,6 +296,7 @@ export default class {
             }
           }
         }
+        cqrs.fxData.container = {};
       }
       for (let type of mvcTypes) {
         for (let alias in thinkData.alias) {
@@ -312,7 +312,6 @@ export default class {
         }
       }
     }
-    // todo
   }
 
   load() {
@@ -371,20 +370,34 @@ export default class {
     logger.debug(i18n.t('预加载程序包完成'), 'PRELOAD', startTime);
   }
 
+  // WARN!! 清空事件库将删除全部业务数据
+  async clearEvents() {
+    logger.warn(i18n.t('清空业务数据!'));
+    await cqrs.clear();
+  }
+
   // 回退上次安装或升级失败
-  async rollback() {
-    await this.init();
+  async rollback(force = false) {
+
+    logger.info(i18n.t('开始回滚安装失败模块'));
+    await this.init({
+      cqrs: {
+        bus: {
+          commandBus: 'direct',
+          eventBus: 'direct',
+        }
+      }
+    });
     this.loadModule();
     this.loadORM(true);
     this.loadCQRS(true);
     this.loadConfig();
 
     if (await Installs.has('waitCommit')) {
-      logger.info(i18n.t('开始回滚安装失败模块'));
       await cqrs.backMigrate();
       if (await Installs.getInstallMode() == 'resouce') {
         logger.debug(i18n.t('恢复数据库快速表备份'));
-        await orm.restore(this.module);
+        await orm.restore(this.module, force);
       } else {
         //await cqrs.migrate(this.module, true);
         logger.debug(i18n.t('回退数据库迁移'));
@@ -401,12 +414,20 @@ export default class {
 
   // 已有模块升级后需要数据迁移
   async migrate() {
+    logger.info(i18n.t('开始迁移模块'));
     const notCommitteds = await Installs.has('waitCommit');
     if (notCommitteds) {
       throw new Error(i18n.t('还有上次未安装成功的模块需要回滚'));
     }
 
-    await this.init();
+    await this.init({
+      cqrs: {
+        bus: {
+          commandBus: 'direct',
+          eventBus: 'direct',
+        }
+      }
+    });
     this.loadModule();
     this.loadORM(true);
     this.loadCQRS(true);
@@ -415,8 +436,6 @@ export default class {
     if (!this.module || this.module.length <= 0) {
       logger.warn(i18n.t('未加载任何模块'));
     }
-
-    logger.info(i18n.t('开始迁移模块'));
 
     try {
       // 记录
@@ -448,12 +467,20 @@ export default class {
   // 采用回溯方式安装或升级(较慢)
   async resource() {
 
+    logger.info(i18n.t('开始回溯模块'));
     const notCommitteds = await Installs.has('waitCommit');
     if (notCommitteds) {
       throw new Error(i18n.t('还有上次未安装成功的模块需要回滚'));
     }
 
-    await this.init();
+    await this.init({
+      cqrs: {
+        bus: {
+          commandBus: 'direct',
+          eventBus: 'direct',
+        }
+      }
+    });
     this.loadModule();
     this.loadORM(true);
     this.loadCQRS(true);
@@ -462,8 +489,6 @@ export default class {
     if (!this.module || this.module.length <= 0) {
       logger.warn(i18n.t('未加载任何模块'));
     }
-
-    logger.info(i18n.t('开始回溯模块'));
 
     try {
       // 记录
@@ -486,10 +511,10 @@ export default class {
       // 提交
       await Installs.commit();
     } catch (err) {
+      logger.error(i18n.t('业务回溯失败'), err);
       await cqrs.backMigrate();
       await orm.restore(this.module);
       await Installs.rollback(this.module);
-      logger.error(i18n.t('业务回溯失败'), err);
       return false;
     }
     await orm.removeBackup();
@@ -511,7 +536,7 @@ export default class {
     });
   }
 
-  async init() {
+  async init(cfg = {}) {
     // assert(this.querydb, '数据库必须配置');
     // assert(this.eventmq, '数据库必须配置');
     // assert(this.eventdb, '数据库必须配置');
@@ -532,14 +557,17 @@ export default class {
     await orm.connect(this.querydb);
     // 出事话cqrs
     cqrs.init({
+      debug: this.debugMode,
       eventmq: this.eventmq,
-      eventdb: this.eventdb
+      eventdb: this.eventdb,
+      ...cfg.cqrs
     })
     // 重置
     this.moduleConfigs = {};
   }
 
   async run(preload) {
+    logger.info(i18n.t('启动 saasplat-server...'));
     await this.init();
     this.load();
     this.autoReload();
@@ -550,5 +578,6 @@ export default class {
     this.captureError();
     boots.startup();
     mvc.require('app').run();
+    cqrs.run();
   }
 }
