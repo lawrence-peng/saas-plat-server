@@ -69,7 +69,7 @@ export default class {
     logInit(log);
     logLevel && logger.setLevel(logLevel);
     if (this.module) {
-      logger.info(i18n.t('模块加载完成'), this.module.length);
+      logger.debug(i18n.t('模块加载完成'), this.module.length);
       logger.trace(this.module);
     }
   }
@@ -124,7 +124,7 @@ export default class {
     }).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
     this.module = appModules.concat(devModules);
-    logger.info(i18n.t('模块加载完成'), this.module.length);
+    logger.debug(i18n.t('模块加载完成'), this.module.length);
     logger.trace(this.module);
   }
 
@@ -368,7 +368,7 @@ export default class {
     for (let name in boots.data.alias) {
       boots.require(boots.data.alias[name]);
     }
-    logger.info(i18n.t('预加载程序包完成'), 'PRELOAD', startTime);
+    logger.debug(i18n.t('预加载程序包完成'), 'PRELOAD', startTime);
   }
 
   // 回退上次安装或升级失败
@@ -383,17 +383,17 @@ export default class {
       logger.info(i18n.t('开始回滚安装失败模块'));
       await cqrs.backMigrate();
       if (await Installs.getInstallMode() == 'resouce') {
-        logger.info(i18n.t('恢复数据库快速表备份'));
+        logger.debug(i18n.t('恢复数据库快速表备份'));
         await orm.restore(this.module);
       } else {
         //await cqrs.migrate(this.module, true);
-        logger.info(i18n.t('回退数据库迁移'));
+        logger.debug(i18n.t('回退数据库迁移'));
         await orm.migrate(this.module, true);
       }
       await Installs.rollback(this.module);
-      logger.info(i18n.t('回滚失败模块完成'));
+      logger.debug(i18n.t('回滚失败模块完成'));
     } else {
-      logger.info(i18n.t('无回滚任务'));
+      logger.debug(i18n.t('无回滚任务'));
     }
 
     return true;
@@ -415,6 +415,8 @@ export default class {
     if (!this.module || this.module.length <= 0) {
       logger.warn(i18n.t('未加载任何模块'));
     }
+
+    logger.info(i18n.t('开始迁移模块'));
 
     try {
       // 记录
@@ -460,6 +462,8 @@ export default class {
     if (!this.module || this.module.length <= 0) {
       logger.warn(i18n.t('未加载任何模块'));
     }
+
+    logger.info(i18n.t('开始回溯模块'));
 
     try {
       // 记录
@@ -521,7 +525,7 @@ export default class {
       logger.warn('eventmq未进行配置，启用默认配置');
     }
     if (this.debugMode) {
-      logger.info('saasplat debug mode');
+      logger.debug('saasplat debug mode');
     }
     this.clearData();
     // 连接查询库

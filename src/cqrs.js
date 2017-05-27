@@ -103,9 +103,9 @@ const createListener = (total, progressCallback) => {
   }, code, error) => {
     if (!code) {
       current++;
-      logger.info(i18n.t('开始回溯事件'), module + '/' + name, id);
+      logger.debug(i18n.t('开始回溯事件'), module + '/' + name, id);
     } else if (code == 'ok') {
-      logger.info(i18n.t('回溯事件完成'), module + '/' + name, id);
+      logger.debug(i18n.t('回溯事件完成'), module + '/' + name, id);
     } else {
       logger.warn(i18n.t('回溯事件失败'), module + '/' + name, id, code, error || '');
       // 回溯是不允许失败的，必须保证所有已经发生的业务都被执行
@@ -127,7 +127,7 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
   saasplat.resourcing = true;
   let total = 0,
     current = 0;
-  logger.info(i18n.t('开始回溯事件...'));
+  logger.debug(i18n.t('开始回溯事件...'));
   try {
     const eventModules = caluModules(modules);
     const eventDispatcher = cqrsBus.getEventDispatcher();
@@ -139,7 +139,7 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
     });
     const listener = createListener(total, progressCallback);
     eventDispatcher.addListener(listener, listener, listener);
-    logger.info(i18n.t('预计回溯事件') + ' ' + total);
+    logger.debug(i18n.t('预计回溯事件') + ' ' + total);
     const spec = {
       module: {
         $in: eventModules
@@ -167,11 +167,11 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
         version: item.version,
         timestamp: item.timestamp
       });
-      logger.info(i18n.t('已回溯事件') + ' ' + Math.floor(current * 100.0 / total) + '%');
+      logger.debug(i18n.t('已回溯事件') + ' ' + Math.floor(current * 100.0 / total) + '%');
     });
   } finally {
     delete saasplat.resourcing;
-    logger.info(i18n.t('回溯事件完成'));
+    logger.debug(i18n.t('回溯事件完成'));
   }
 }
 
@@ -195,7 +195,7 @@ const revertVersion = async() => {
 
 const migrate = async(modules, progressCallback) => {
   assert(modules);
-  logger.info(i18n.t('开始迁移...'));
+  logger.debug(i18n.t('开始迁移...'));
   const migrations = {};
   let total = 0;
   let current = 0;
@@ -221,7 +221,7 @@ const migrate = async(modules, progressCallback) => {
       throw new Error(module + i18n.t('模块状态无效'));
     }
   }
-  logger.info(i18n.t('预计迁移命令') + ' ' + total);
+  logger.debug(i18n.t('预计迁移命令') + ' ' + total);
   invoke(progressCallback, {total, current});
   for (const module of modules) {
     const ups = migrations[module];
@@ -229,10 +229,10 @@ const migrate = async(modules, progressCallback) => {
       current++;
       await up(cqrsCore._require(i));
       invoke(progressCallback, {total, current});
-      logger.info(i18n.t('已执行迁移') + ' ' + Math.floor(current * 100.0 / total) + '%');
+      logger.debug(i18n.t('已执行迁移') + ' ' + Math.floor(current * 100.0 / total) + '%');
     }
   }
-  logger.info(i18n.t('迁移完成'));
+  logger.debug(i18n.t('迁移完成'));
 }
 
 const backMigrate = async() => {

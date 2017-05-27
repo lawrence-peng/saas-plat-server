@@ -179,7 +179,7 @@ const createModel = async(Model, force = false) => {
       force
     });
     // todo 执行升级脚本
-    logger.info(i18n.t('表已创建'), model.name);
+    logger.debug(i18n.t('表已创建'), model.name);
   }
 };
 
@@ -196,7 +196,7 @@ const createModels = async(model, force = false) => {
 };
 
 const create = async(modules, name, force = false) => {
-  logger.info(i18n.t('开始重建数据表...'));
+  logger.debug(i18n.t('开始重建数据表...'));
   for (let module of modules) {
     if (name) {
       await createModel(_require(`${module}/model/${name}`), force);
@@ -210,11 +210,11 @@ const create = async(modules, name, force = false) => {
       }
     }
   }
-  logger.info(i18n.t('重建数据表完成'));
+  logger.debug(i18n.t('重建数据表完成'));
 };
 
 const drop = async(modules) => {
-  logger.info(i18n.t('开始销毁数据表...'));
+  logger.debug(i18n.t('开始销毁数据表...'));
   const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   for (let name of tableNames) {
@@ -222,28 +222,28 @@ const drop = async(modules) => {
       await queryInterface.dropTable(name);
     }
   }
-  logger.info(i18n.t(`销毁数据表完成`));
+  logger.debug(i18n.t(`销毁数据表完成`));
 }
 
 const backup = async(modules) => {
-  logger.info(i18n.t(`开始备份数据表...`));
+  logger.debug(i18n.t(`开始备份数据表...`));
   const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   if (tableNames.length <= 0) {
-    logger.info(i18n.t(`无数据表需要备份`));
+    logger.debug(i18n.t(`无数据表需要备份`));
   }
   for (let name of tableNames) {
     if (!modules || modules.indexOf(name.split('_')[0]) > -1) {
       if (name.endsWith('__bak')) {
-        logger.info(i18n.t(`删除历史备份`), name);
+        logger.debug(i18n.t(`删除历史备份`), name);
         await queryInterface.dropTable(name);
         continue;
       }
-      logger.info(i18n.t(`备份数据表`), name);
+      logger.debug(i18n.t(`备份数据表`), name);
       await queryInterface.renameTable(name, name + '__bak');
     }
   }
-  logger.info(i18n.t(`备份数据表完成`));
+  logger.debug(i18n.t(`备份数据表完成`));
 }
 
 const removeBackup = async(modules) => {
@@ -252,7 +252,7 @@ const removeBackup = async(modules) => {
   tableNames.forEach(name => {
     if (!modules || (name.split('_')[0] in modules)) {
       if (name.endsWith('__bak')) {
-        logger.info(i18n.t(`删除历史备份`), name);
+        logger.debug(i18n.t(`删除历史备份`), name);
         queryInterface.dropTable(name);
       }
     }
@@ -260,7 +260,7 @@ const removeBackup = async(modules) => {
 }
 
 const restore = async(modules, force = false) => {
-  logger.info(i18n.t(`开始恢复备份数据表..`));
+  logger.debug(i18n.t(`开始恢复备份数据表..`));
   const queryInterface = _data.db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   for (let name of tableNames) {
@@ -269,28 +269,28 @@ const restore = async(modules, force = false) => {
         const tblName = name.substr(0, name.length - 5);
         if (tableNames.indexOf(tblName) > -1) {
           if (force) {
-            logger.info(i18n.t(`删除数据表`), tblName);
+            logger.debug(i18n.t(`删除数据表`), tblName);
             await queryInterface.dropTable(tblName);
           } else {
             throw new Error(i18n.t('数据表已经存在', tblName));
           }
         }
-        logger.info(i18n.t(`回复备份`), tblName);
+        logger.debug(i18n.t(`回复备份`), tblName);
         await queryInterface.renameTable(name, tblName);
       }
     }
   }
-  logger.info(i18n.t(`恢复备份数据表完成`));
+  logger.debug(i18n.t(`恢复备份数据表完成`));
 }
 
 const up = async(Migration, queryInterface) => {
-  logger.info(i18n.t(`升级`) + Migration.name);
+  logger.debug(i18n.t(`升级`) + Migration.name);
   const migration = new Migration(queryInterface);
   await migration.up();
 }
 
 const down = async(Migration, queryInterface) => {
-  logger.info(i18n.t(`降级`) + Migration.name);
+  logger.debug(i18n.t(`降级`) + Migration.name);
   const migration = new Migration(queryInterface);
   await migration.down();
 }
@@ -300,7 +300,7 @@ const migrate = async(modules, revert = false) => {
   const queryInterface = _data.db.getQueryInterface();
   const migrations = Object.keys(_data.alias).filter(item => item.indexOf(`${module}/${_dirname.migration}/`)).sort(cmpVer);
   if (revert) {
-    logger.info(i18n.t(`开始回退迁移数据..`));
+    logger.debug(i18n.t(`开始回退迁移数据..`));
     for (let module of modules) {
       const last = lastChild(await Installs.find(module, 'install'));
       const current = lastChild(await Installs.find(module, 'waitCommit'));
@@ -320,7 +320,7 @@ const migrate = async(modules, revert = false) => {
       }
     }
   } else {
-    logger.info(i18n.t(`开始迁移数据..`));
+    logger.debug(i18n.t(`开始迁移数据..`));
     for (let module of modules) {
       const last = lastChild(await Installs.find(module, 'install')) || {
         name: module,
@@ -343,7 +343,7 @@ const migrate = async(modules, revert = false) => {
       }
     }
   }
-  logger.info(i18n.t(`迁移数据完成`));
+  logger.debug(i18n.t(`迁移数据完成`));
 }
 
 const connect = async(querydb) => {
