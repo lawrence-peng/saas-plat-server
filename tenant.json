@@ -8,6 +8,11 @@
     "password": "123456",
     "database": "testserver1_querys",
     "host": "localhost",
-    "dialect": "mysql"
+    "dialect": "mysql",
+    "pool": {
+      "max": 5,
+      "min": 0,
+      "idle": 10000
+    }
   }
 }

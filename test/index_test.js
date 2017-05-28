@@ -66,13 +66,9 @@ describe('应用', function () {
     expect(await instance.migrate()).to.be.true;
 
     // 也去迁移代码1.0.2执行设置了默认QQ
-    aaa = await saasplat.model.get('module1/account').findOne({
-      where: {
-        id: 'aaa'
-      }
-    });
+    aaa = await saasplat.model.get('module1/account').findOne( {where:{ id: 'aaa'}, attributes:['id', 'displayName'] });
     expect(aaa).to.not.be.null;
-    //  console.log(aaa)
+    expect(aaa.id).to.not.be.null;
     expect(aaa.QQ).to.be.equal('noqq');
 
     // QQ字段增加

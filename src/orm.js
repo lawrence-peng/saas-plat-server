@@ -4,10 +4,7 @@ import Sequelize from 'sequelize'; // orm
 import i18n from './util/i18n';
 import logger from './util/log';
 import Installs from './util/installs';
-import {
-  cmpVer,
-  lastChild
-} from './util/cmp';
+import {cmpVer, lastChild} from './util/cmp';
 
 const _data = {
   alias: {},
@@ -28,8 +25,8 @@ const getFiles = (file) => {
     for (var fi of files) {
       if (fs.statSync(path.join(file, fi)).isFile())
         dirs.push(fi);
+      }
     }
-  }
   return dirs;
 };
 
@@ -132,13 +129,10 @@ const define = (module, name, schame, options) => {
   if (!module) {
     throw new Error(i18n.t('查询对象无效，模块未指定'));
   }
-  return _data.db.define.apply(_data.db, [
-    module + '_' + name,
-    schame, {
-      ...options,
-      tableName: module + '_' + name
-    }
-  ]);
+  return _data.db.define(module + '_' + name, schame, {
+    ...options,
+    tableName: module + '_' + name
+  });
 };
 
 const get = (module, name) => {
@@ -148,16 +142,18 @@ const get = (module, name) => {
   if (!module) {
     throw new Error(i18n.t('查询对象未找到，模块未知'));
   }
-  const modelName = _data.alias[`${module}/model/${name}`];
-  if (modelName in _data.defines) {
-    return _data.defines[modelName];
+  const modelAlias = `${module}/model/${name}`;
+  if (modelAlias in _data.defines) {
+    return _data.defines[modelAlias];
   }
   try {
-    const modelInst = new _require(modelName);
-    _data.defines[modelName] = define(module, name, typeof modelInst.schame == 'function' ?
-      modelInst.schame() : {}, typeof modelInst.schame == 'function' ?
-      modelInst.options() : {});
-    return _data.defines[modelName];
+    const modelInst = new _require(_data.alias[modelAlias]);
+    _data.defines[modelAlias] = define(module, name, typeof modelInst.schame == 'function'
+      ? modelInst.schame()
+      : {}, typeof modelInst.schame == 'function'
+      ? modelInst.options()
+      : {});
+    return _data.defines[modelAlias];
   } catch (e) {
     logger.warn(e);
     throw new Error(i18n.t('查询对象不存在'));
@@ -166,14 +162,14 @@ const get = (module, name) => {
 
 const createModel = async(Model, force = false) => {
   const modelInst = new Model;
-  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function' ?
-    modelInst.schame() : {}, typeof modelInst.options == 'function' ?
-    modelInst.options() : {});
+  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function'
+    ? modelInst.schame()
+    : {}, typeof modelInst.options == 'function'
+    ? modelInst.options()
+    : {});
   if (model) {
     // force = drop and create
-    await model.sync({
-      force
-    });
+    await model.sync({force});
     // todo 执行升级脚本
     logger.debug(i18n.t('表已创建'), model.name);
   }
@@ -345,9 +341,9 @@ const connect = async(querydb) => {
   }
   let {
     database = 'saasplat_querys',
-      username = 'root',
-      password = '',
-      ...options
+    username = 'root',
+    password = '',
+    ...options
   } = querydb;
   _data.db = new Sequelize(database, username, password, options);
   // 检查是否能连接
@@ -358,8 +354,8 @@ const TYPE = Sequelize; // 类型使用Sequelize
 
 export default {
   alias,
-  require: _require,
-  data: _data,
+  require : _require,
+  data : _data,
   drop,
   get,
   define,

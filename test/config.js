@@ -1,6 +1,6 @@
 export const IP = 'localhost'
 
-export const querydb= {
+export const querydb = {
   username: "root",
   password: "123456",
   database: "testserver1_querys",

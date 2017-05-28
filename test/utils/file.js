@@ -50,7 +50,7 @@ export var exists = function (src, dst, callback) {
 
 };
 
-export const deleteFolderRecursive = function (path) {
+   function _deleteFolderRecursive (path) {
 
   var files = [];
 
@@ -64,7 +64,7 @@ export const deleteFolderRecursive = function (path) {
 
       if (fs.statSync(curPath).isDirectory()) { // recurse
 
-        deleteFolderRecursive(curPath);
+        _deleteFolderRecursive(curPath);
 
       } else { // delete file
 
@@ -79,3 +79,5 @@ export const deleteFolderRecursive = function (path) {
   }
 
 };
+
+export const deleteFolderRecursive=_deleteFolderRecursive;

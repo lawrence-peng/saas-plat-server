@@ -7,7 +7,11 @@ const logpath = path.dirname(__dirname) + path.sep + 'runtime' + path.sep + 'log
 const defaultConfig = {
   "appenders": [
     {
-      type: 'console'
+      type: 'console',
+      layout: {
+        type: 'pattern',
+        pattern: "\x1B[90m[%d]\x1B[39m \x1B[36m[SAAS-PLAT]\x1B[39m %[%m%]" 
+      }
     }, {
       "type": "dateFile",
       "filename": logpath + path.sep + 'server.txt',
@@ -25,7 +29,7 @@ function mkdirs(dirpath) {
   }
 }
 
-export function init(config ) {
+export function init(config) {
   const cfg = {
     ...defaultConfig,
     ...config
@@ -36,4 +40,4 @@ export function init(config ) {
   }
   log4js.configure(cfg);
 }
-export default   log4js.getLogger();
+export default log4js.getLogger();

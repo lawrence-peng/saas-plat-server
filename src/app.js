@@ -4,16 +4,12 @@ import assert from 'assert';
 import glob from 'glob';
 
 import mvc from './mvc';
-import {
-  app as mvcInstance
-} from './mvc';
+import {app as mvcInstance} from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
-import {
-  init as logInit
-} from './util/log';
+import {init as logInit} from './util/log';
 import logger from './util/log';
 import i18n from './util/i18n';
 import Installs from './util/installs';
@@ -67,7 +63,7 @@ export default class {
     saasplat.systemdb = this.systemdb = systemdb;
     this.eventmq = eventmq;
     logInit(log);
-    logLevel && logger.setLevel(logLevel);
+    logger.setLevel(logLevel || 'INFO');
     if (this.module) {
       logger.debug(i18n.t('模块加载完成'), this.module.length);
       logger.trace(this.module);
@@ -115,13 +111,10 @@ export default class {
     if (this.module) {
       return;
     }
-    let devModules = this.devPath ?
-      glob.sync(this.devGlob, {
-        cwd: this.devPath
-      }) : [];
-    let appModules = glob.sync(this.glob, {
-      cwd: this.appPath
-    }).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
+    let devModules = this.devPath
+      ? glob.sync(this.devGlob, {cwd: this.devPath})
+      : [];
+    let appModules = glob.sync(this.glob, {cwd: this.appPath}).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
     this.module = appModules.concat(devModules);
     logger.debug(i18n.t('模块加载完成'), this.module.length);
@@ -231,11 +224,11 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    const devModules = glob.sync(this.devPath ?
-      this.devGlob :
-      this.glob, {
-        cwd: this.devPath || this.appPath
-      })
+    const devModules = glob.sync(this.devPath
+      ? this.devGlob
+      : this.glob, {
+      cwd: this.devPath || this.appPath
+    })
     let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
     instance.run();
     mvcInstance.compile(options);
@@ -384,7 +377,7 @@ export default class {
       cqrs: {
         bus: {
           commandBus: 'direct',
-          eventBus: 'direct',
+          eventBus: 'direct'
         }
       }
     });
@@ -424,7 +417,7 @@ export default class {
       cqrs: {
         bus: {
           commandBus: 'direct',
-          eventBus: 'direct',
+          eventBus: 'direct'
         }
       }
     });
@@ -439,12 +432,7 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(this.module.map(name => ({
-        name,
-        version: this.moduleConfigs[name].version,
-        installDate: new Date(),
-        status: 'waitCommit'
-      })));
+      await Installs.save(this.module.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
       await Installs.setInstallMode('migrate');
       // 升级数据
       await orm.migrate(this.module);
@@ -477,7 +465,7 @@ export default class {
       cqrs: {
         bus: {
           commandBus: 'direct',
-          eventBus: 'direct',
+          eventBus: 'direct'
         }
       }
     });
@@ -492,12 +480,7 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(this.module.map(name => ({
-        name,
-        version: this.moduleConfigs[name].version,
-        installDate: new Date(),
-        status: 'waitCommit'
-      })));
+      await Installs.save(this.module.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
       await Installs.setInstallMode('resource');
       // 之前可能已经安装过，但是卸载后会保留数据表，需要备份
       await orm.backup(this.module);
@@ -522,7 +505,7 @@ export default class {
   }
 
   captureError() {
-    process.on('uncaughtException', function (err) {
+    process.on('uncaughtException', function(err) {
       var msg = err.message || err;
       if (msg.toString().indexOf(' EADDRINUSE ') > -1) {
         logger.warn(err);
@@ -531,7 +514,7 @@ export default class {
         logger.error(err);
       }
     });
-    process.on('unhandledRejection', function (err) {
+    process.on('unhandledRejection', function(err) {
       logger.error(err);
     });
   }
@@ -547,7 +530,7 @@ export default class {
       logger.warn('eventdb未进行配置，启用默认配置');
     }
     if (!this.eventmq) {
-      logger.warn('eventmq未进行配置，启用默认配置');
+      logger.warn('eventmq未进行配置，启用默认配置','aaa');
     }
     if (this.debugMode) {
       logger.debug('saasplat debug mode');

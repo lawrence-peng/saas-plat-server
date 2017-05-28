@@ -24,7 +24,8 @@ var run = function(cfg) {
     eventdb: cfg.eventdb,
     systemdb: cfg.systemdb,
     // 服务
-    roles: cfg.roles || ['web', 'app', 'task', 'workflow']
+    roles: cfg.roles || ['web', 'app', 'task', 'workflow'],
+    logLevel: cfg.logLevel || 'INFO'
   });
   instance.run();
 }

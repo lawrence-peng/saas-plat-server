@@ -14,7 +14,7 @@ if (fs.existsSync(configfile)) {
 // load app module
 var instance = new app({
   appPath: path.join(process.cwd(), 'node_modules'),
-  devPath:  process.cwd() ,
+  devPath: process.cwd(),
   // 模块配置文件
   modules: config.modules || 'saas-plat-*',
   devModules: "*"
@@ -23,11 +23,11 @@ var instance = new app({
   eventdb: config.eventdb,
   systemdb: config.systemdb,
   // 服务
-  roles: config.roles || ['web', 'app', 'task', 'workflow'],
-  debug: true
-  debugOutput: true
+  roles: config.roles || [
+    'web', 'app', 'task', 'workflow'
+  ],
+  debug: config.debug || true,
+  logLevel: config.logLevel || 'ALL'
 });
-instance.compile({
-  log: true
-});
+instance.compile({log: true});
 instance.run();
