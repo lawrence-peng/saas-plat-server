@@ -1,6 +1,6 @@
 import Account from './account';
 
-export default class extends Account {
+export default class UserAccount extends Account {
   contactPhone;
   contactAddress;
 
@@ -45,7 +45,7 @@ export default class extends Account {
   }
 
   updateQQ(QQ) {
-   
+
     this.raiseEvent('accountUpdated', {
       userName: this.userName,
       QQ
@@ -89,6 +89,7 @@ export default class extends Account {
       this.contactAddress = email;
     }
       if (QQ !== undefined) {
+        console.log(' update qq finished')
         this.QQ = QQ;
       }
   }

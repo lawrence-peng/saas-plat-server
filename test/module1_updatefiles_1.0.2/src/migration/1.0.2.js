@@ -5,6 +5,7 @@ export default class extends saasplat.migration {
     for (let item of items) {
       const user = await this.getRepository('user', item.id);
       user.updateQQ('noqq');
+      this.save(user);
       await this.commit();
     }
   }

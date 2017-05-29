@@ -75,19 +75,18 @@ describe('应用', function() {
     aaa = await saasplat.model.get('module1/account').findOne({
       where: {
         id: 'aaa'
-      },
-      attributes: ['id', 'QQ']
+      }
     });
     expect(aaa).to.not.be.null;
     expect(aaa.id).to.not.be.null;
     expect(aaa.QQ).to.be.equal('noqq');
 
     // QQ字段增加
-    await saasplat.comand.publish({
-      type: 'module1/createAccount',
+    await saasplat.command.publish({
+      name: 'module1/createAccount',
       data: {
         userName: 'bbb',
-        password: '123',
+        password: '123444',
         QQ: '12345699'
       }
     });
@@ -97,6 +96,7 @@ describe('应用', function() {
         id: 'bbb'
       }
     });
+    expect(bbb).to.not.be.null;
     expect(bbb.QQ).to.be.equal('12345699');
 
     // 关联模块
@@ -116,8 +116,8 @@ describe('应用', function() {
     expect(other_accounts[1].name).to.be.equal('bbb');
 
     // 正常关联
-    await saasplat.comand.publish({
-      type: 'module1/createAccount',
+    await saasplat.command.publish({
+      name: 'module1/createAccount',
       data: {
         userName: 'ccc',
         password: '123',

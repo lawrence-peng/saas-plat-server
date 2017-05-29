@@ -9,8 +9,7 @@ import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
-import {init as logInit} from './util/log';
-import logger from './util/log';
+import {init as logInit, spLogger as logger} from './util/log';
 import i18n from './util/i18n';
 import Installs from './util/installs';
 import AutoReload from './util/auto_reload';
@@ -235,76 +234,32 @@ export default class {
   }
 
   clearData() {
-    // clear exports
-    for (let module of this.module || []) {
-      logger.trace('clear ' + module);
-      for (let type of bootTypes) {
-        for (let alias in boots.data.alias) {
-          if (boots.data.alias.hasOwnProperty(alias)) {
-            if (alias.startsWith(module.replace(/\\/g, '/') + '/' + type)) {
-              if (boots.data.export.hasOwnProperty(alias)) {
-                delete boots.data.export[alias];
-              }
-              delete boots.data.alias[alias];
-              logger.trace('delete ' + alias);
-            }
-          }
-        }
-      }
-      for (let type of configTypes) {
-        for (let alias in config.data.alias) {
-          if (config.data.alias.hasOwnProperty(alias)) {
-            if (alias.startsWith(module.replace(/\\/g, '/') + '/' + type)) {
-              if (config.data.export.hasOwnProperty(alias)) {
-                delete config.data.export[alias];
-              }
-              delete config.data.alias[alias];
-              logger.trace('delete ' + alias);
-            }
-          }
-        }
-      }
-      for (let type of ormTypes) {
-        for (let alias in orm.data.alias) {
-          if (orm.data.alias.hasOwnProperty(alias)) {
-            if (alias.startsWith(module.replace(/\\/g, '/') + '/' + type)) {
-              if (orm.data.export.hasOwnProperty(alias)) {
-                delete orm.data.export[alias];
-              }
-              delete orm.data.alias[alias];
-              logger.trace('delete ' + alias);
-            }
-          }
-        }
-      }
-      for (let type of cqrsTypes) {
-        for (let alias in cqrs.fxData.alias) {
-          if (cqrs.fxData.alias.hasOwnProperty(alias)) {
-            if (alias.startsWith(module.replace(/\\/g, '/') + '/' + type)) {
-              if (cqrs.fxData.export.hasOwnProperty(alias)) {
-                delete cqrs.fxData.export[alias];
-              }
-              delete cqrs.fxData.alias[alias];
-              logger.trace('delete ' + alias);
-            }
-          }
-        }
-        cqrs.fxData.container = {};
-      }
-      for (let type of mvcTypes) {
-        for (let alias in thinkData.alias) {
-          if (thinkData.alias.hasOwnProperty(alias)) {
-            if (alias.startsWith(module.replace(/\\/g, '/') + '/' + type)) {
-              if (thinkData.export.hasOwnProperty(alias)) {
-                delete thinkData.export[alias];
-              }
-              delete thinkData.alias[alias];
-              logger.trace('delete ' + alias);
-            }
-          }
-        }
-      }
-    }
+
+    logger.warn(i18n.t('重新加载...'));
+
+    boots.data.export = {};
+    boots.data.alias = {};
+
+    config.data.export = {};
+    config.data.alias = {};
+
+    orm.data.export = {};
+    orm.data.alias = {};
+    orm.data.defines = {};
+
+    cqrs.fxData.export = {};
+    cqrs.fxData.alias = {}
+    cqrs.fxData.container = {};
+
+    thinkData.alias = {};
+    thinkData.export = {};
+    thinkData.config = {};
+    thinkData.hook = {};
+    thinkData.template = {};
+    thinkData.middleware = {};
+    thinkData.subController = {};
+    thinkData.route = null;
+
   }
 
   load() {
@@ -530,7 +485,7 @@ export default class {
       logger.warn('eventdb未进行配置，启用默认配置');
     }
     if (!this.eventmq) {
-      logger.warn('eventmq未进行配置，启用默认配置','aaa');
+      logger.warn('eventmq未进行配置，启用默认配置', 'aaa');
     }
     if (this.debugMode) {
       logger.debug('debug mode');
@@ -559,8 +514,8 @@ export default class {
       this.preload();
     }
     this.captureError();
-    boots.startup();
-    mvc.require('app').run();
-    cqrs.run();
+    await boots.startup();
+    await mvc.require('app').run();
+    await cqrs.run();
   }
 }

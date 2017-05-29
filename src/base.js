@@ -5,7 +5,7 @@ import path from 'path';
 import mvc from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
-import logger from './util/log';
+import {spLogger as logger} from './util/log';
 import conf from './config';
 import assert from 'assert';
 import i18n from './util/i18n';
@@ -186,6 +186,18 @@ saasplat.commandhandler = class extends cqrs.CommandHandler {
       }
     };
   }
+
+  getAggregate(name, module) {
+    return cqrs.Aggregate.get(name, checkModule(module || this.module));
+  }
+
+  async save(...aggregates) {
+    await cqrs.repository.getRepository().save(...aggregates);
+  }
+
+  async commit() {
+    await cqrs.repository.getRepository().commit();
+  }
 };
 
 saasplat.eventhandler = class extends cqrs.EventHandler {
@@ -215,10 +227,13 @@ saasplat.migration = class Migration {
     return cqrs.Aggregate.get(name, checkModule(module || this.module));
   }
 
-  commit(){
-    cqrs.repository.getRepository().commit();
+  async save(...aggregates) {
+    await cqrs.repository.getRepository().save(...aggregates);
   }
 
+  async commit() {
+    await cqrs.repository.getRepository().commit();
+  }
 
   up() {}
   down() {}
@@ -242,6 +257,146 @@ saasplat.model.migration = class {
   constructor() {
     this.queryInterface = orm.data.db.getQueryInterface();
   }
+
+  get module() {
+    return getModule(this.__filename);
+  }
+
+  getTableName(tableName, options) {
+    if (!tableName) {
+      return tableName;
+    }
+    return `${ (options && options.module) || this.module}_${tableName}`;
+  }
+
+  createTable(tableName, attributes, options, ...others) {
+    this.queryInterface.createTable(this.getTableName(tableName, options), attributes, options, ...others);
+  }
+
+  dropTable(tableName, options, ...others) {
+    this.queryInterface.dropTable(this.getTableName(tableName, options), options, ...others);
+  }
+
+  dropAllTables(options, ...others) {
+    return new Promise((resolve) => {
+      const module = options.module || this.module;
+      this.showAllTables(options).then(tableNames => {
+        const skips = tableNames.filter(name => name.split('_')[0] != module);
+        const sks = (options.skip || []).map(name => `${module}_${name}`);
+        options.skip = [
+          ...sks,
+          ...skips
+        ];
+        return this.queryInterface.dropAllTables(options, ...others);
+      });
+    });
+  }
+
+  renameTable(before, after, options, ...others) {
+    return this.queryInterface.renameTable(this.getTableName(before, options), this.getTableName(after, options), ...others);
+  }
+
+  showAllTables(options, ...others) {
+    return this.queryInterface.showAllTables(options, ...others).then(tableNames => {
+      const module = options.module || this.module;
+      return tableNames.filter(name => name.split('_')[0] == module).map(name => {
+        return name.substr(name.indexOf('_') + 1);
+      });
+    });
+  }
+
+  describeTable(tableName, options, ...others) {
+    return this.queryInterface.describeTable(this.getTableName(tableName, options), options, ...others);
+  }
+
+  addColumn(tableName, key, attribute, options, ...others) {
+    return this.queryInterface.addColumn(this.getTableName(tableName, options), key, attribute, options, ...others);
+  }
+
+  removeColumn(tableName, attributeName, options, ...others) {
+    return this.queryInterface.removeColumn(this.getTableName(tableName, options), attributeName, options, ...others);
+  }
+
+  changeColumn(tableName, attributeName, dataTypeOrOptions, options, ...others) {
+    return this.queryInterface.changeColumn(this.getTableName(tableName, options), attributeName, dataTypeOrOptions, options, ...others);
+  }
+
+  renameColumn(tableName, attrNameBefore, attrNameAfter, options, ...others) {
+    return this.queryInterface.renameColumn(this.getTableName(tableName, options), attributeName, attrNameAfter, options, ...others);
+  }
+
+  addIndex(tableName, attributes, options, rawTablename, ...others) {
+    return this.queryInterface.addIndex(this.getTableName(tableName, options), attributes, options, this.getTableName(rawTablename, options), ...others);
+  }
+
+  showIndex(tableName, options, ...others) {
+    return this.queryInterface.showIndex(this.getTableName(tableName, options), options, ...others);
+  }
+
+  nameIndexes(indexes, rawTablename, ...others) {
+    return this.queryInterface.nameIndexes((indexes || []).map(name => this.getTableName(name, options)), this.getTableName(rawTablename, options), ...others);
+  }
+
+  getForeignKeysForTables(tableNames, options, ...others) {
+    return this.queryInterface.getForeignKeysForTables((tableNames || []).map(tableName => this.getTableName(tableName, options)), options, ...others);
+  }
+
+  removeIndex(tableName, indexNameOrAttributes, options, ...others) {
+    return this.queryInterface.removeIndex(this.getTableName(tableName, options), indexNameOrAttributes, options, ...others);
+  }
+
+  addConstraint(tableName, attributes, options, rawTablename, ...others) {
+    return this.queryInterface.addConstraint(this.getTableName(tableName, options), attributes, options, this.getTableName(rawTablename, options), ...others);
+  }
+
+  showConstraint(tableName, options, ...others) {
+    return this.queryInterface.showConstraint(this.getTableName(tableName, options), options, ...others);
+  }
+
+  removeConstraint(tableName, constraintName, options, ...others) {
+    return this.queryInterface.removeConstraint(this.getTableName(tableName, options), this.getTableName(constraintName, options), options, ...others);
+  }
+
+  insert(instance, tableName, values, options, ...others) {
+    return this.queryInterface.insert(instance, this.getTableName(tableName, options), values, options, ...others);
+  }
+
+  upsert(tableName, valuesByField, updateValues, where, model, options, ...others) {
+    return this.queryInterface.upsert(this.getTableName(tableName, options), valuesByField, updateValues, where, model, options, ...others);
+  }
+
+  bulkInsert(tableName, records, options, attributes, ...others) {
+    return this.queryInterface.bulkInsert(this.getTableName(tableName, options), records, options, attributes, ...others);
+  }
+
+  update(instance, tableName, values, identifier, options, ...others) {
+    return this.queryInterface.update(instance, this.getTableName(tableName, options), values, identifier, options, ...others);
+  }
+
+  bulkUpdate(tableName, values, identifier, options, ...others) {
+    return this.queryInterface.bulkUpdate(this.getTableName(tableName, options), values, identifier, options, ...others);
+  }
+
+  delete(instance, tableName, identifier, options, ...others) {
+    return this.queryInterface.delete(instance, this.getTableName(tableName, options), identifier, options, ...others);
+  }
+
+  bulkDelete(tableName, identifier, options, ...others) {
+    return this.queryInterface.bulkDelete(this.getTableName(tableName, options), identifier, options, ...others);
+  }
+
+  select(model, tableName, options, ...others) {
+    return this.queryInterface.select(model, this.getTableName(tableName, options), options, ...others);
+  }
+
+  increment(instance, tableName, values, identifier, options, ...others) {
+    return this.queryInterface.increment(instance, this.getTableName(tableName, options), tableName, values, options, ...others);
+  }
+
+  decrement(instance, tableName, values, identifier, options, ...others) {
+    return this.queryInterface.decrement(instance, this.getTableName(tableName, options), values, identifier, options, ...others);
+  }
+
   up() {}
   down() {}
 }

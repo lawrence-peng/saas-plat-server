@@ -8,28 +8,25 @@ export default class extends saasplat.eventhandler {
     QQ,
     isAdmin
   }) {
-    await this.get('account').create({
+    await this.model('account').create({
       name: userName,
       displayName,
       email,
       contactPhone,
       contactAddress: '',
       QQ,
-      role: isAdmin ? 'admin' : 'user'
+      role: isAdmin
+        ? 'admin'
+        : 'user'
     });
 
     console.log('account created');
   }
 
-  async accountUpdated({
-    userName,
-    address,
-    email,
-    QQ
-  }) {
-    const account = await this.get('account').findOne({
+  async accountUpdated({userName, address, email, QQ}) {
+    const account = await this.model('account').findOne({
       where: {
-        name: userName
+        id: userName
       }
     });
     if (!account) {
@@ -43,12 +40,10 @@ export default class extends saasplat.eventhandler {
       account.email = email;
     }
 
-      if (QQ !== undefined) {
-        account.QQ = QQ;
-      }
-
+    if (QQ !== undefined) {
+      account.QQ = QQ;
+    }
+    
     await account.save();
-
-    console.log('account updated');
   }
 }

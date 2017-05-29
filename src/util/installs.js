@@ -3,9 +3,9 @@ import fs from 'fs';
 import assert from 'assert';
 import {
   cmpVer
-} from './cmp';
+} from './common';
 import i18n from './i18n';
-import logger from './log';
+import {spLogger as logger} from './log';
 
 const OPTIONS = 'options.json';
 const INSTALLS = 'installs.json';

@@ -5,13 +5,35 @@ import log4js from 'log4js';
 const logpath = path.dirname(__dirname) + path.sep + 'runtime' + path.sep + 'logs';
 
 const defaultConfig = {
-  "appenders": [
+  appenders: [
     {
       type: 'console',
       layout: {
         type: 'pattern',
-        pattern: "\x1B[90m[%d]\x1B[39m \x1B[36m[SAAS-PLAT]\x1B[39m %[%m%]" 
-      }
+        pattern: "\x1B[90m[%d]\x1B[39m \x1B[36m[SAAS-PLAT]\x1B[39m %[%m%]"
+      },
+      category: 'SAASPLAT'
+    }, {
+      type: 'console',
+      layout: {
+        type: 'pattern',
+        pattern: "\x1B[90m[%d]\x1B[39m \x1B[36m[ThinkJS]\x1B[39m %[%m%]"
+      },
+      category: 'ThinkJS'
+    }, {
+      type: 'console',
+      layout: {
+        type: 'pattern',
+        pattern: "\x1B[90m[%d]\x1B[39m \x1B[36m[CQRS]\x1B[39m %[%m%]"
+      },
+      category: 'CQRS'
+    }, {
+      type: 'console',
+      layout: {
+        type: 'pattern',
+        pattern: "\x1B[90m[%d]\x1B[39m \x1B[36m[SEQUELIZE]\x1B[39m %[%m%]"
+      },
+      category: 'Sequelize'
     }, {
       "type": "dateFile",
       "filename": logpath + path.sep + 'server.txt',
@@ -34,10 +56,10 @@ export function init(config) {
     ...defaultConfig,
     ...config
   };
-  const files = cfg.appenders.map(item => item.filename).filter(item => !!item);
-  for (let file of files) {
-    mkdirs(path.dirname(file));
-  }
+  mkdirs(logpath);
   log4js.configure(cfg);
 }
-export default log4js.getLogger();
+export const spLogger = log4js.getLogger('SAASPLAT');
+export const mvcLogger = log4js.getLogger('ThinkJS');
+export const cqrsLogger = log4js.getLogger('CQRS');
+export const ormLogger = log4js.getLogger('Sequelize');

@@ -9,7 +9,7 @@ export default class extends saasplat.eventhandler {
     email,
     isAdmin
   }) {
-    await this.get('other_account').create({
+    await this.model('other_account').create({
       name: userName
     });
 

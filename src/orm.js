@@ -1,10 +1,10 @@
 import path from 'path';
 import fs from 'fs';
-import Sequelize from 'sequelize'; // orm
+import Sequelize from 'sequelize';
 import i18n from './util/i18n';
-import logger from './util/log';
+import {ormLogger as logger} from './util/log';
 import Installs from './util/installs';
-import {cmpVer, lastChild} from './util/cmp';
+import {cmpVer, lastChild, getClassName} from './util/common';
 
 const _data = {
   alias: {},
@@ -129,10 +129,11 @@ const define = (module, name, schame, options) => {
   if (!module) {
     throw new Error(i18n.t('查询对象无效，模块未指定'));
   }
-  return _data.db.define(module + '_' + name, schame, {
+  const Model = _data.db.define(module + '_' + name, schame, {
     ...options,
     tableName: module + '_' + name
   });
+  return Model;
 };
 
 const get = (module, name) => {
@@ -147,10 +148,14 @@ const get = (module, name) => {
     return _data.defines[modelAlias];
   }
   try {
-    const modelInst = new _require(_data.alias[modelAlias]);
+    const modelType = _require(_data.alias[modelAlias]);
+    const modelInst = new modelType;
+    if (typeof modelInst.schame != 'function') {
+      logger.warn(i18n.t('查询对象schame未定义'), `${module}/${name}`);
+    }
     _data.defines[modelAlias] = define(module, name, typeof modelInst.schame == 'function'
       ? modelInst.schame()
-      : {}, typeof modelInst.schame == 'function'
+      : {}, typeof modelInst.options == 'function'
       ? modelInst.options()
       : {});
     return _data.defines[modelAlias];
@@ -273,13 +278,13 @@ const restore = async(modules, force = false) => {
 }
 
 const up = async(Migration) => {
-  logger.debug(i18n.t(`升级`) + Migration.name);
+  logger.debug(i18n.t(`升级`), getClassName(Migration));
   const migration = new Migration();
   await migration.up();
 }
 
 const down = async(Migration) => {
-  logger.debug(i18n.t(`降级`) + Migration.name);
+  logger.debug(i18n.t(`降级`), getClassName(Migration));
   const migration = new Migration();
   await migration.down();
 }
@@ -291,16 +296,17 @@ const migrate = async(modules, revert = false) => {
   } else {
     logger.debug(i18n.t(`开始迁移数据..`));
   }
-  const migrations = Object.keys(_data.alias).filter(async item => {
+  const migrations = [];
+  for (const item of Object.keys(_data.alias)) {
     const sp = item.split('/');
     const module = sp[0];
+    const v = sp[2];
     if (module.indexOf(module) < 0) {
-      return false;
+      continue;
     }
     if (sp[1] != 'datamigration') {
-      return false;
+      continue;
     }
-    const v = sp[2];
     const last = lastChild(await Installs.find(module, 'install')) || {
       name: module,
       version: '0.0.0'
@@ -309,19 +315,25 @@ const migrate = async(modules, revert = false) => {
     if (!current) {
       throw new Error(i18n.t('模块状态无效'), module);
     }
-    return cmpVer(v, last.version) > 0 && cmpVer(v, current.version) < 0;
-  }).sort(cmpVer);
-
-  logger.debug(i18n.t('预计执行迁移'), migrations.length);
+    if (cmpVer(v, last.version) > 0 && cmpVer(v, current.version) <= 0) {
+      migrations.push(item);
+    }
+  }
+  migrations.sort(cmpVer);
+  const total = migrations.length;
+  let current = 0;
+  logger.debug(i18n.t('预计迁移数据'), total);
   if (revert) {
     migrations.reverse();
   }
-  for (const i of migrations) {
+  for (const typeAlias of migrations) {
+    current++;
     if (revert) {
-      await down(_require(i));
+      await down(_require(typeAlias));
     } else {
-      await up(_require(i));
+      await up(_require(typeAlias));
     }
+    logger.debug(i18n.t('已迁移数据') + ' ' + Math.floor(current * 100.0 / total) + '%');
   }
   logger.debug(i18n.t(`迁移数据完成`));
 }
@@ -336,7 +348,12 @@ const connect = async(querydb) => {
     password = '',
     ...options
   } = querydb;
-  _data.db = new Sequelize(database, username, password, options);
+  _data.db = new Sequelize(database, username, password, {
+    ...options,
+    logging: (...args) => {
+      logger.debug(...args)
+    }
+  });
   // 检查是否能连接
   await _data.db.authenticate();
   return _data.db;
