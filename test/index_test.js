@@ -1,17 +1,17 @@
-import {
-  expect
-} from 'chai';
+import {expect} from 'chai';
 import path from 'path';
 import App from '../src/app';
 import * as utils from './utils/file';
-import {
-  querydb,
-  eventdb,
-  eventmq
-} from './config';
+import {querydb, eventdb, eventmq} from './config';
 
-describe('应用', function () {
-  it('启动后停止服务', function () {
+const sleep = (timeout = 0) => {
+  return new Promise((next) => {
+    setTimeout(next, timeout);
+  })
+}
+
+describe('应用', function() {
+  it('启动后停止服务', function() {
     const instance = new App({
       appPath: path.normalize(path.join(__dirname, '../demo')),
       srcPath: path.normalize(path.join(__dirname, '../demo')),
@@ -26,7 +26,7 @@ describe('应用', function () {
     expect(instance.module).to.eql(['module1', 'this-module-has-long-name']);
   })
 
-  it('安装或升级一个模块', async function () {
+  it('安装或升级一个模块', async function() {
     const id = 'index_test';
     utils.deleteFolderRecursive(__dirname + '/data/' + id);
     utils.exists(__dirname + '/module1', __dirname + '/data/' + id + '/module1', utils.copy);
@@ -57,16 +57,27 @@ describe('应用', function () {
     let aaa = await saasplat.model.get('module1/account').findById('aaa');
     expect(aaa).to.not.be.null;
 
+    // 开始升级
     utils.copy(path.normalize(path.join(__dirname, 'module1_updatefiles_1.0.1')), path.normalize(path.join(__dirname, 'data/' + id + '/module1')));
+
+    // 需要等待重新加载
+    await sleep(200);
 
     expect(await instance.migrate()).to.be.true;
 
     utils.copy(path.normalize(path.join(__dirname, 'module1_updatefiles_1.0.2')), path.normalize(path.join(__dirname, 'data/' + id + '/module1')));
 
+    await sleep(200);
+
     expect(await instance.migrate()).to.be.true;
 
     // 也去迁移代码1.0.2执行设置了默认QQ
-    aaa = await saasplat.model.get('module1/account').findOne( {where:{ id: 'aaa'}, attributes:['id', 'displayName'] });
+    aaa = await saasplat.model.get('module1/account').findOne({
+      where: {
+        id: 'aaa'
+      },
+      attributes: ['id', 'QQ']
+    });
     expect(aaa).to.not.be.null;
     expect(aaa.id).to.not.be.null;
     expect(aaa.QQ).to.be.equal('noqq');

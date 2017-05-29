@@ -533,7 +533,7 @@ export default class {
       logger.warn('eventmq未进行配置，启用默认配置','aaa');
     }
     if (this.debugMode) {
-      logger.debug('saasplat debug mode');
+      logger.debug('debug mode');
     }
     this.clearData();
     // 连接查询库

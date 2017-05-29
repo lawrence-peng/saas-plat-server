@@ -1,11 +1,12 @@
 export default class extends saasplat.migration {
   async up() {
     // 包所有没有QQ的账户更新成noqq
-    // for (let item of this.model('account').findAll()) {
-    //   await this.repository.get('user', item.id).updateQQ('noqq');
-    //   await this.repository.commit();
-    // }
-    console.log('migration up to 1.0.2');
+    const items = await this.model('account').findAll();
+    for (let item of items) {
+      const user = await this.getRepository('user', item.id);
+      user.updateQQ('noqq');
+      await this.commit();
+    }
   }
 
   down() {

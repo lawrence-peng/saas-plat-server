@@ -272,64 +272,55 @@ const restore = async(modules, force = false) => {
   logger.debug(i18n.t(`恢复备份数据表完成`));
 }
 
-const up = async(Migration, queryInterface) => {
+const up = async(Migration) => {
   logger.debug(i18n.t(`升级`) + Migration.name);
-  const migration = new Migration(queryInterface);
+  const migration = new Migration();
   await migration.up();
 }
 
-const down = async(Migration, queryInterface) => {
+const down = async(Migration) => {
   logger.debug(i18n.t(`降级`) + Migration.name);
-  const migration = new Migration(queryInterface);
+  const migration = new Migration();
   await migration.down();
 }
 
 // 升级或者降级
 const migrate = async(modules, revert = false) => {
-  const queryInterface = _data.db.getQueryInterface();
-  const migrations = Object.keys(_data.alias).filter(item => item.indexOf(`${module}/${_dirname.migration}/`)).sort(cmpVer);
   if (revert) {
     logger.debug(i18n.t(`开始回退迁移数据..`));
-    for (let module of modules) {
-      const last = lastChild(await Installs.find(module, 'install'));
-      const current = lastChild(await Installs.find(module, 'waitCommit'));
-      if (!current || !last) {
-        return;
-      }
-      const downs = migrations.filter(item => {
-        const sp = item.split('/');
-        if (sp[0] !== module) {
-          return false;
-        }
-        const v = sp[2];
-        return cmpVer(v, last.version) > 0 && cmpVer(v, current.version) < 0;
-      });
-      for (let i of downs) {
-        await down(_require(i), queryInterface);
-      }
-    }
   } else {
     logger.debug(i18n.t(`开始迁移数据..`));
-    for (let module of modules) {
-      const last = lastChild(await Installs.find(module, 'install')) || {
-        name: module,
-        version: '0.0.0'
-      };
-      const current = lastChild(await Installs.find(module, 'waitCommit'));
-      if (!current) {
-        return;
-      }
-      const ups = migrations.filter(item => {
-        const sp = item.split('/');
-        if (sp[0] !== module) {
-          return false;
-        }
-        const v = sp[2];
-        return cmpVer(v, last.version) > 0 && cmpVer(v, current.version) < 0;
-      });
-      for (var i of ups) {
-        await up(_require(i), queryInterface);
-      }
+  }
+  const migrations = Object.keys(_data.alias).filter(async item => {
+    const sp = item.split('/');
+    const module = sp[0];
+    if (module.indexOf(module) < 0) {
+      return false;
+    }
+    if (sp[1] != 'datamigration') {
+      return false;
+    }
+    const v = sp[2];
+    const last = lastChild(await Installs.find(module, 'install')) || {
+      name: module,
+      version: '0.0.0'
+    };
+    const current = lastChild(await Installs.find(module, 'waitCommit'));
+    if (!current) {
+      throw new Error(i18n.t('模块状态无效'), module);
+    }
+    return cmpVer(v, last.version) > 0 && cmpVer(v, current.version) < 0;
+  }).sort(cmpVer);
+
+  logger.debug(i18n.t('预计执行迁移'), migrations.length);
+  if (revert) {
+    migrations.reverse();
+  }
+  for (const i of migrations) {
+    if (revert) {
+      await down(_require(i));
+    } else {
+      await up(_require(i));
     }
   }
   logger.debug(i18n.t(`迁移数据完成`));
