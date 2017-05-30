@@ -43,8 +43,8 @@ describe('应用', function() {
     await instance.clearEvents();
     instance.compile();
     // 新模块都必须采用回溯方式安装
-    expect(await instance.rollback(true)).to.be.true;
-    expect(await instance.resource()).to.be.true;
+    expect(await instance.rollback(['module1'], true)).to.be.true;
+    expect(await instance.resource(['module1'])).to.be.true;
 
     await saasplat.command.publish({
       name: 'module1/createAccount',
@@ -63,13 +63,13 @@ describe('应用', function() {
     // 需要等待重新加载
     await sleep(200);
 
-    expect(await instance.migrate()).to.be.true;
+    expect(await instance.migrate(['module1'])).to.be.true;
 
     utils.copy(path.normalize(path.join(__dirname, 'module1_updatefiles_1.0.2')), path.normalize(path.join(__dirname, 'data/' + id + '/module1')));
 
     await sleep(200);
 
-    expect(await instance.migrate()).to.be.true;
+    expect(await instance.migrate(['module1'])).to.be.true;
 
     // 也去迁移代码1.0.2执行设置了默认QQ
     aaa = await saasplat.model.get('module1/account').findOne({
@@ -100,16 +100,16 @@ describe('应用', function() {
     expect(bbb.QQ).to.be.equal('12345699');
 
     // 关联模块
-    utils.copy(path.normalize(path.join(__dirname, 'data/module2')), path.normalize(path.join(__dirname, 'data/' + id + '/module2')));
+    utils.copy(path.normalize(path.join(__dirname, 'module2')), path.normalize(path.join(__dirname, 'data/' + id + '/module2')));
 
     const app2 = new App({
       appPath: path.normalize(path.join(__dirname, 'data/' + id)),
       systemdb: path.normalize(path.join(__dirname, 'data/' + id)),
-      modules: ['module2']
+      modules: ['module1', 'module2']
     });
-    expect(await app2.migrate()).to.be.true;
+    expect(await app2.resource(['module2'])).to.be.true;
 
-    // 之前添加aaa，bbb用户存在other_account表中
+    // 之前添加aaa,bbb用户存在other_account表中
     const other_accounts = await saasplat.model.get('module2/other_account').findAll();
     expect(other_accounts.length).to.be.equal(2);
     expect(other_accounts[0].name).to.be.equal('aaa');

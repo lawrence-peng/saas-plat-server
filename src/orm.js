@@ -301,7 +301,7 @@ const migrate = async(modules, revert = false) => {
     const sp = item.split('/');
     const module = sp[0];
     const v = sp[2];
-    if (module.indexOf(module) < 0) {
+    if (modules.indexOf(module) < 0) {
       continue;
     }
     if (sp[1] != 'datamigration') {

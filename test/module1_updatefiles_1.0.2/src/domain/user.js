@@ -89,7 +89,7 @@ export default class UserAccount extends Account {
       this.contactAddress = email;
     }
       if (QQ !== undefined) {
-        console.log(' update qq finished')
+        //console.log(' update qq finished')
         this.QQ = QQ;
       }
   }

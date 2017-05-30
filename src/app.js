@@ -325,7 +325,7 @@ export default class {
   }
 
   // 回退上次安装或升级失败
-  async rollback(force = false) {
+  async rollback(modules, force = false) {
 
     logger.info(i18n.t('开始回滚安装失败模块'));
     await this.init({
@@ -345,13 +345,13 @@ export default class {
       await cqrs.backMigrate();
       if (await Installs.getInstallMode() == 'resouce') {
         logger.debug(i18n.t('恢复数据库快速表备份'));
-        await orm.restore(this.module, force);
+        await orm.restore(modules || this.module, force);
       } else {
         //await cqrs.migrate(this.module, true);
         logger.debug(i18n.t('回退数据库迁移'));
-        await orm.migrate(this.module, true);
+        await orm.migrate(modules || this.module, true);
       }
-      await Installs.rollback(this.module);
+      await Installs.rollback(modules || this.module);
       logger.debug(i18n.t('回滚失败模块完成'));
     } else {
       logger.debug(i18n.t('无回滚任务'));
@@ -361,7 +361,7 @@ export default class {
   }
 
   // 已有模块升级后需要数据迁移
-  async migrate() {
+  async migrate(modules) {
     logger.info(i18n.t('开始迁移模块'));
     const notCommitteds = await Installs.has('waitCommit');
     if (notCommitteds) {
@@ -381,34 +381,36 @@ export default class {
     this.loadCQRS(true);
     this.loadConfig();
 
-    if (!this.module || this.module.length <= 0) {
+    modules = modules || modules;
+
+    if (!modules || modules.length <= 0) {
       logger.warn(i18n.t('未加载任何模块'));
     }
 
     try {
       // 记录
-      await Installs.save(this.module.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
+      await Installs.save(modules.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
       await Installs.setInstallMode('migrate');
       // 升级数据
-      await orm.migrate(this.module);
+      await orm.migrate(modules);
       // 升级业务
       await cqrs.revertVersion();
-      await cqrs.migrate(this.module);
+      await cqrs.migrate(modules);
       // 提交
       await Installs.commit();
     } catch (err) {
       logger.error(i18n.t('数据迁移失败'), err);
       await cqrs.backMigrate();
       // 降级数据
-      await orm.migrate(this.module, true);
-      await Installs.rollback(this.module);
+      await orm.migrate(modules, true);
+      await Installs.rollback(modules);
       return false;
     }
     return true;
   }
 
   // 采用回溯方式安装或升级(较慢)
-  async resource() {
+  async resource(modules) {
 
     logger.info(i18n.t('开始回溯模块'));
     const notCommitteds = await Installs.has('waitCommit');
@@ -429,30 +431,32 @@ export default class {
     this.loadCQRS(true);
     this.loadConfig();
 
-    if (!this.module || this.module.length <= 0) {
+    modules = modules || modules;
+
+    if (!modules || modules.length <= 0) {
       logger.warn(i18n.t('未加载任何模块'));
     }
 
     try {
       // 记录
-      await Installs.save(this.module.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
+      await Installs.save(modules.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
       await Installs.setInstallMode('resource');
       // 之前可能已经安装过，但是卸载后会保留数据表，需要备份
-      await orm.backup(this.module);
+      await orm.backup(modules);
       // 重建
-      await orm.create(this.module);
+      await orm.create(modules);
       // 重塑
-      await cqrs.resource(this.module);
+      await cqrs.resource(modules);
       // 升级业务
       await cqrs.revertVersion();
-      await cqrs.migrate(this.module);
+      await cqrs.migrate(modules);
       // 提交
       await Installs.commit();
     } catch (err) {
       logger.error(i18n.t('业务回溯失败'), err);
       await cqrs.backMigrate();
-      await orm.restore(this.module);
-      await Installs.rollback(this.module);
+      await orm.restore(modules);
+      await Installs.rollback(modules);
       return false;
     }
     await orm.removeBackup();
@@ -479,13 +483,13 @@ export default class {
     // assert(this.eventmq, '数据库必须配置');
     // assert(this.eventdb, '数据库必须配置');
     if (!this.querydb) {
-      logger.warn('querydb未进行配置，启用默认配置');
+      logger.warn('querydb未进行配置，已启用默认配置');
     }
     if (!this.eventdb) {
-      logger.warn('eventdb未进行配置，启用默认配置');
+      logger.warn('eventdb未进行配置，已启用默认配置');
     }
     if (!this.eventmq) {
-      logger.warn('eventmq未进行配置，启用默认配置', 'aaa');
+      logger.warn('eventmq未进行配置，已启用默认配置');
     }
     if (this.debugMode) {
       logger.debug('debug mode');

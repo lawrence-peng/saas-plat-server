@@ -20,7 +20,7 @@ let eventWorker;
 const init = (cfg) => {
   config.init({
     bus: {
-      commandBus: 'direct',   // 命令采用同步执行
+      commandBus: 'direct', // 命令采用同步执行
       eventBus: 'mq',
       eventMQ: {
         name: 'eventqueue',
@@ -48,15 +48,21 @@ const init = (cfg) => {
     },
     log: {
       enable: cfg.debug,
-      logging: (...args)=>{
+      logging: (...args) => {
         logger.debug(...args);
+      },
+      warning: (...args) => {
+        logger.warn(...args);
+      },
+      error: (...args) => {
+        logger.error(...args);
       }
     }
   });
 }
 
-const run = async () => {
-  if (eventWorker){
+const run = async() => {
+  if (eventWorker) {
     return;
   }
   eventWorker = new MqWorker('event');
@@ -153,7 +159,7 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
     current = 0;
   logger.debug(i18n.t('开始回溯事件...'));
   try {
-    const eventModules = caluModules(modules);
+    const eventModules = caluModules(modules); 
     const eventDispatcher = cqrsBus.getEventDispatcher();
     const eventStorage = cqrsEvent.getStorage().eventStorage;
     total = await eventStorage.count({

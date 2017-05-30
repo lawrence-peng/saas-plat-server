@@ -9,7 +9,7 @@ export default class extends saasplat.eventhandler {
     isAdmin
   }) {
     await this.model('account').create({
-      name: userName,
+      id: userName,
       displayName,
       email,
       contactPhone,
@@ -20,7 +20,7 @@ export default class extends saasplat.eventhandler {
         : 'user'
     });
 
-    console.log('account created');
+  //  console.log('account created');
   }
 
   async accountUpdated({userName, address, email, QQ}) {
@@ -43,7 +43,7 @@ export default class extends saasplat.eventhandler {
     if (QQ !== undefined) {
       account.QQ = QQ;
     }
-    
+
     await account.save();
   }
 }
