@@ -105,7 +105,14 @@ describe('应用', function() {
     const app2 = new App({
       appPath: path.normalize(path.join(__dirname, 'data/' + id)),
       systemdb: path.normalize(path.join(__dirname, 'data/' + id)),
-      modules: ['module1', 'module2']
+      modules: [
+        'module1', 'module2'
+      ],
+      querydb,
+      eventmq,
+      eventdb,
+      debug: true,
+      logLevel: 'DEBUG'
     });
     expect(await app2.resource(['module2'])).to.be.true;
 

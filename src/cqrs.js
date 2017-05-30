@@ -137,7 +137,7 @@ const createListener = (total, progressCallback) => {
     } else if (code == 'ok') {
       logger.debug(i18n.t('回溯事件完成'), module + '/' + name, id);
     } else {
-      logger.warn(i18n.t('回溯事件失败'), module + '/' + name, id, code, error || '');
+      //logger.warn(i18n.t('回溯事件失败'), module + '/' + name, id, code, error || '');
       // 回溯是不允许失败的，必须保证所有已经发生的业务都被执行
       throw new Error(error);
     }
@@ -159,7 +159,7 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
     current = 0;
   logger.debug(i18n.t('开始回溯事件...'));
   try {
-    const eventModules = caluModules(modules); 
+    const eventModules = caluModules(modules);
     const eventDispatcher = cqrsBus.getEventDispatcher();
     const eventStorage = cqrsEvent.getStorage().eventStorage;
     total = await eventStorage.count({

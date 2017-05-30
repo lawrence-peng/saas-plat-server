@@ -1,5 +1,5 @@
 
-export default class extends saasplat.eventhandler {
+export default class handler2 extends saasplat.eventhandler {
   @event('module1')
   async accountCreated({
     contactPhone,
