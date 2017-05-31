@@ -136,7 +136,7 @@ describe('应用', function () {
       name: 'module1/createAccount',
       data: {
         userName: 'ccc',
-        password: '123',
+        password: '123555',
         QQ: '887756464'
       }
     });
