@@ -148,7 +148,15 @@ const get = (module, name) => {
     return _data.defines[modelAlias];
   }
   try {
+    if (!(modelAlias in _data.alias)){
+      logger.debug(i18n.t('查询对象不存在'), `${module}/${name}`);
+      return null;
+    }
     const modelType = _require(_data.alias[modelAlias]);
+    if (!modelType){
+      logger.warn(i18n.t('查询对象加载失败'), `${module}/${name}`);
+      return null;
+    }
     const modelInst = new modelType;
     if (typeof modelInst.schame != 'function') {
       logger.warn(i18n.t('查询对象schame未定义'), `${module}/${name}`);

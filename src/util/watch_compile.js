@@ -157,7 +157,7 @@ export default class {
       let data = babel.transform(content, {
         filename: file,
         presets: [].concat(this.options.presets || ['es2015', 'stage-1', 'stage-3']),
-        plugins: [].concat(this.options.plugins || ['transform-runtime']),
+        plugins: [].concat(this.options.plugins || ['transform-runtime', 'transform-decorators-legacy']),
         sourceMaps: true,
         sourceFileName: relativePath
       });

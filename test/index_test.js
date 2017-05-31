@@ -1,8 +1,14 @@
-import {expect} from 'chai';
+import {
+  expect
+} from 'chai';
 import path from 'path';
 import App from '../src/app';
 import * as utils from './utils/file';
-import {querydb, eventdb, eventmq} from './config';
+import {
+  querydb,
+  eventdb,
+  eventmq
+} from './config';
 
 const sleep = (timeout = 0) => {
   return new Promise((next) => {
@@ -10,8 +16,8 @@ const sleep = (timeout = 0) => {
   })
 }
 
-describe('应用', function() {
-  it('启动后停止服务', function() {
+describe('应用', function () {
+  it('启动后停止服务', function () {
     const instance = new App({
       appPath: path.normalize(path.join(__dirname, '../demo')),
       srcPath: path.normalize(path.join(__dirname, '../demo')),
@@ -26,7 +32,7 @@ describe('应用', function() {
     expect(instance.module).to.eql(['module1', 'this-module-has-long-name']);
   })
 
-  it('安装或升级一个模块', async function() {
+  it('安装或升级一个模块', async function () {
     const id = 'index_test';
     utils.deleteFolderRecursive(__dirname + '/data/' + id);
     utils.exists(__dirname + '/module1', __dirname + '/data/' + id + '/module1', utils.copy);
@@ -99,8 +105,10 @@ describe('应用', function() {
     expect(bbb).to.not.be.null;
     expect(bbb.QQ).to.be.equal('12345699');
 
+    console.log('app2...')
+
     // 关联模块
-    utils.copy(path.normalize(path.join(__dirname, 'module2')), path.normalize(path.join(__dirname, 'data/' + id + '/module2')));
+    utils.exists(__dirname + '/module2', __dirname + '/data/' + id + '/module2', utils.copy);
 
     const app2 = new App({
       appPath: path.normalize(path.join(__dirname, 'data/' + id)),
@@ -114,6 +122,7 @@ describe('应用', function() {
       debug: true,
       logLevel: 'DEBUG'
     });
+    app2.compile();
     expect(await app2.resource(['module2'])).to.be.true;
 
     // 之前添加aaa,bbb用户存在other_account表中
