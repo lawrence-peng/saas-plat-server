@@ -128,11 +128,7 @@ saasplat.controller.rest = class extends saasplat.controller.base {
 
     this._isRest = true;
     this._method = '';
-  }
-
-  get module() {
-    return getModule(this.__filename);
-  }
+  }  
 };
 
 saasplat.logic = {};

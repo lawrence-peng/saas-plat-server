@@ -70,10 +70,7 @@ export default class {
   }
 
   _getPath(module, type) {
-    let mod = '';
-    if (think.mode === think.mode_module) {
-      mod = module + path.sep;
-    }
+    let mod = module + path.sep;
     let subPath = 'app';
     if (!this.moduleConfigs) {
       this.moduleConfigs = {};
@@ -108,6 +105,8 @@ export default class {
 
   loadModule() {
     if (this.module) {
+      saasplat.modules = this.module;
+      saasplat.devModules = this.devModules;
       return;
     }
     let devModules = this.devPath
@@ -116,6 +115,8 @@ export default class {
     let appModules = glob.sync(this.glob, {cwd: this.appPath}).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
     this.module = appModules.concat(devModules);
+    saasplat.modules = this.module;
+    saasplat.devModules = this.devModules;
     logger.debug(i18n.t('模块加载完成'), this.module.length);
     logger.trace(this.module);
   }
