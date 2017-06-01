@@ -68,6 +68,8 @@ saas-plat-server是前后端分离的模式，server只能提供api接口，
   cd mymodule1
 ```
 
+**更多API参见API文档**
+
 ### CQRS DDD
 
 业务模块采用DDD领域驱动设计方式开发

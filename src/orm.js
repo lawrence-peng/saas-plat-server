@@ -82,11 +82,7 @@ let _safeRequire = file => {
 };
 
 let _loadRequire = (name, filepath) => {
-  let obj = _safeRequire(filepath);
-  if (typeof obj == 'function') {
-    obj.prototype.__type = name;
-    obj.prototype.__filename = filepath;
-  }
+  let obj = _safeRequire(filepath); 
   if (obj) {
     _data.export[name] = obj;
   }

@@ -5,9 +5,7 @@ import path from 'path';
 import mvc from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
-import {
-  spLogger as logger
-} from './util/log';
+import {spLogger as logger} from './util/log';
 import conf from './config';
 import assert from 'assert';
 import i18n from './util/i18n';
@@ -19,7 +17,7 @@ saasplat.sep = path.sep;
 saasplat.join = path.join;
 saasplat.dirname = path.dirname;
 
-saasplat.getModuleConfig = function (module, name) {
+saasplat.getModuleConfig = function(module, name) {
   let config = conf.require(module + '/config/config', true);
   if (!name)
     return config;
@@ -28,10 +26,10 @@ saasplat.getModuleConfig = function (module, name) {
   config = conf.require(module + '/config/' + name, true);
   return config;
 };
-saasplat.setModuleConfig = function (module, name, value) {
+saasplat.setModuleConfig = function(module, name, value) {
   console.warn('setModuleConfig not support!');
 };
-saasplat.config = function (name, value, module) {
+saasplat.config = function(name, value, module) {
   if (value == undefined) {
     if (module) {
       let val = saasplat.getModuleConfig(module, name);
@@ -55,7 +53,7 @@ saasplat.logEnable = true;
 saasplat.log = (...args) => {
   if (saasplat.logEnable)
     logger.info.apply(logger, args);
-};
+  };
 saasplat.warn = (...args) => {
   //if (saasplat.logEnable)
   logger.warn.apply(logger, args);
@@ -63,11 +61,11 @@ saasplat.warn = (...args) => {
 saasplat.debug = (...args) => {
   if (saasplat.logEnable)
     logger.debug.apply(logger, args);
-};
+  };
 saasplat.info = (...args) => {
   if (saasplat.logEnable)
     logger.info.apply(logger, args);
-};
+  };
 saasplat.error = (...args) => {
   //if (saasplat.logEnable)
   logger.error.apply(logger, args);
@@ -75,7 +73,19 @@ saasplat.error = (...args) => {
 
 saasplat.base = (superclass) => class extends superclass {
   log(...args) {
-    saasplat.log(...(args.map(arg => this.t(arg))));
+    saasplat.log(...args);
+  }
+  warn(...args) {
+    saasplat.warn(...args);
+  }
+  debug(...args) {
+    saasplat.debug(...args);
+  }
+  info(...args) {
+    saasplat.info(...args);
+  }
+  error(...args) {
+    saasplat.error(...args);
   }
 
   t(txt, module) {
@@ -206,11 +216,9 @@ saasplat.eventhandler = class extends saasplat.base(cqrs.EventHandler) {
   }
 };
 
-class spobj{
+class Obj {}
 
-}
-
-saasplat.migration = class extends saasplat.base(spobj) {
+saasplat.migration = class extends saasplat.base(Obj) {
   getRepository(name, id, module, ...porps) {
     return cqrs.repository.getRepository().get(name, id, module || this.module, ...porps);
   }
@@ -237,7 +245,7 @@ saasplat.migration = class extends saasplat.base(spobj) {
 
 // 使用Sequelize orm
 saasplat.model = {};
-saasplat.model.base = class extends saasplat.base(spobj) {
+saasplat.model.base = class extends saasplat.base(Obj) {
   schame() {
     return null;
   }
@@ -246,7 +254,7 @@ saasplat.model.base = class extends saasplat.base(spobj) {
   }
 }
 
-saasplat.model.migration = class extends saasplat.base(spobj) {
+saasplat.model.migration = class extends saasplat.base(Obj) {
   constructor() {
     super();
     this.queryInterface = orm.data.db.getQueryInterface();
@@ -408,3 +416,9 @@ saasplat.model.get = (name, module) => {
   }
   return orm.get(module, name);
 };
+
+saasplat.bootstrap = class extends saasplat.base(Obj){
+  run(){
+
+  }
+}

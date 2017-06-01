@@ -43,7 +43,7 @@ export default class {
     saasplat.devPath = this.devPath = devPath && path.normalize(devPath);
     this.devModules = [];
     if (Array.isArray(modules)) {
-      this.module = modules;
+      this.modules = modules;
       this.glob = `+(${modules.join('|')})`
     } else if (typeof modules == 'string') {
       this.glob = modules;
@@ -51,7 +51,7 @@ export default class {
       logger.warn(i18n.t('模块不存在'));
     }
     if (Array.isArray(devModules)) {
-      this.module = (this.module || []).concat(devModules);
+      this.modules = (this.modules || []).concat(devModules);
     } else if (typeof modules == 'string') {
       this.devGlob = devModules;
     }
@@ -63,9 +63,9 @@ export default class {
     this.eventmq = eventmq;
     logInit(log);
     logger.setLevel(logLevel || 'INFO');
-    if (this.module) {
-      logger.debug(i18n.t('模块加载完成'), this.module.length);
-      logger.trace(this.module);
+    if (this.modules) {
+      logger.debug(i18n.t('模块加载完成'), this.modules.length);
+      logger.trace(this.modules);
     }
   }
 
@@ -104,8 +104,8 @@ export default class {
   }
 
   loadModule() {
-    if (this.module) {
-      saasplat.modules = this.module;
+    if (this.modules) {
+      saasplat.modules = this.modules;
       saasplat.devModules = this.devModules;
       return;
     }
@@ -114,20 +114,20 @@ export default class {
       : [];
     let appModules = glob.sync(this.glob, {cwd: this.appPath}).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
-    this.module = appModules.concat(devModules);
-    saasplat.modules = this.module;
+    this.modules = appModules.concat(devModules);
+    saasplat.modules = this.modules;
     saasplat.devModules = this.devModules;
-    logger.debug(i18n.t('模块加载完成'), this.module.length);
-    logger.trace(this.module);
+    logger.debug(i18n.t('模块加载完成'), this.modules.length);
+    logger.trace(this.modules);
   }
 
   // 加载扩展的模板
   loadMVC() {
-    think.module = think.module.concat(this.module);
+    think.module = think.module.concat(this.modules);
 
     for (let itemType of mvcTypes) {
-      this.module.forEach(module => {
-        let moduleType = module.replace(/\\/g, '/') + '/' + itemType;
+      this.modules.forEach(module => {
+        let moduleType = module + '/' + itemType;
         let filepath = this._getPath(module, think.dirname[itemType]);
         think.alias(moduleType, filepath, true);
       });
@@ -142,8 +142,8 @@ export default class {
       if (!withMigration && itemType == 'datamigration') {
         continue;
       }
-      this.module.forEach(module => {
-        let moduleType = module.replace(/\\/g, '/') + '/' + itemType;
+      this.modules.forEach(module => {
+        let moduleType = module + '/' + itemType;
         let filepath = this._getPath(module, itemType);
         orm.alias(moduleType, filepath);
       });
@@ -157,8 +157,8 @@ export default class {
       if (!withMigration && itemType == 'migration') {
         continue;
       }
-      this.module.forEach(module => {
-        let name = module.replace(/\\/g, '/');
+      this.modules.forEach(module => {
+        let name = module;
         let moduleType = name + '/' + itemType;
         let filepath = this._getPath(module, itemType);
         cqrs.alias(moduleType, filepath);
@@ -180,7 +180,7 @@ export default class {
       });
     };
     // this的view都在模块文件夹下定义
-    this.module.forEach(module => {
+    this.modules.forEach(module => {
       add(this._getPath(module, think.dirname.view));
     });
     this.templateThink = thinkData.template;
@@ -191,8 +191,8 @@ export default class {
 
   loadBootrstrap() {
     for (let itemType of bootTypes) {
-      this.module.forEach(module => {
-        let name = module.replace(/\\/g, '/');
+      this.modules.forEach(module => {
+        let name = module;
         let moduleType = name + '/' + itemType;
         let filepath = this._getPath(module, itemType);
         boots.alias(moduleType, filepath);
@@ -203,8 +203,8 @@ export default class {
 
   loadConfig() {
     for (let itemType of configTypes) {
-      this.module.forEach(module => {
-        let name = module.replace(/\\/g, '/');
+      this.modules.forEach(module => {
+        let name = module;
         let moduleType = name + '/' + itemType;
         let filepath = this._getPath(module, itemType);
         config.alias(moduleType, filepath);
@@ -274,7 +274,7 @@ export default class {
   }
 
   getReloadInstance() {
-    let instance = new AutoReload(this.devPath || this.appPath, this.module, () => {
+    let instance = new AutoReload(this.devPath || this.appPath, this.modules, () => {
       this.reload();
     });
     return instance;
@@ -346,13 +346,13 @@ export default class {
       await cqrs.backMigrate();
       if (await Installs.getInstallMode() == 'resouce') {
         logger.debug(i18n.t('恢复数据库快速表备份'));
-        await orm.restore(modules || this.module, force);
+        await orm.restore(modules || this.modules, force);
       } else {
-        //await cqrs.migrate(this.module, true);
+        //await cqrs.migrate(this.modules, true);
         logger.debug(i18n.t('回退数据库迁移'));
-        await orm.migrate(modules || this.module, true);
+        await orm.migrate(modules || this.modules, true);
       }
-      await Installs.rollback(modules || this.module);
+      await Installs.rollback(modules || this.modules);
       logger.debug(i18n.t('回滚失败模块完成'));
     } else {
       logger.debug(i18n.t('无回滚任务'));
