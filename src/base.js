@@ -5,7 +5,9 @@ import path from 'path';
 import mvc from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
-import {spLogger as logger} from './util/log';
+import {
+  spLogger as logger
+} from './util/log';
 import conf from './config';
 import assert from 'assert';
 import i18n from './util/i18n';
@@ -17,7 +19,7 @@ saasplat.sep = path.sep;
 saasplat.join = path.join;
 saasplat.dirname = path.dirname;
 
-saasplat.getModuleConfig = function(module, name) {
+saasplat.getModuleConfig = function (module, name) {
   let config = conf.require(module + '/config/config', true);
   if (!name)
     return config;
@@ -26,10 +28,10 @@ saasplat.getModuleConfig = function(module, name) {
   config = conf.require(module + '/config/' + name, true);
   return config;
 };
-saasplat.setModuleConfig = function(module, name, value) {
+saasplat.setModuleConfig = function (module, name, value) {
   console.warn('setModuleConfig not support!');
 };
-saasplat.config = function(name, value, module) {
+saasplat.config = function (name, value, module) {
   if (value == undefined) {
     if (module) {
       let val = saasplat.getModuleConfig(module, name);
@@ -53,23 +55,41 @@ saasplat.logEnable = true;
 saasplat.log = (...args) => {
   if (saasplat.logEnable)
     logger.info.apply(logger, args);
-  };
+};
 saasplat.warn = (...args) => {
-  if (saasplat.logEnable)
-    logger.warn.apply(logger, args);
-  };
+  //if (saasplat.logEnable)
+  logger.warn.apply(logger, args);
+};
 saasplat.debug = (...args) => {
   if (saasplat.logEnable)
     logger.debug.apply(logger, args);
-  };
+};
 saasplat.info = (...args) => {
   if (saasplat.logEnable)
     logger.info.apply(logger, args);
-  };
+};
 saasplat.error = (...args) => {
-  if (saasplat.logEnable)
-    logger.error.apply(logger, args);
-  };
+  //if (saasplat.logEnable)
+  logger.error.apply(logger, args);
+};
+
+saasplat.base = (superclass) => class extends superclass {
+  log(...args) {
+    saasplat.log(...(args.map(arg => this.t(arg))));
+  }
+
+  t(txt, module) {
+    return i18n.t(txt, module || this.module);
+  }
+
+  get module() {
+    return getModule(this.__filename);
+  }
+
+  config(name, value, module) {
+    return saasplat.config(name, value, checkModule(module || this.module));
+  }
+};
 
 // // 界面通过元数据配置方式定义
 // saasplat.view = {};
@@ -103,10 +123,7 @@ const checkModule = (moduleName) => {
 
 // 控制器使用thinkjs的
 saasplat.controller = {};
-saasplat.controller.base = class extends mvc.controller.base {
-  get module() {
-    return getModule(this.__filename);
-  }
+saasplat.controller.base = class extends saasplat.base(mvc.controller.base) {
 
   publish(...messages) {
     cqrs.bus.publishCommand(messages);
@@ -117,9 +134,6 @@ saasplat.controller.base = class extends mvc.controller.base {
     return saasplat.model.get(module + name);
   }
 
-  config(name, value, module) {
-    return saasplat.config(name, value, checkModule(module || this.module));
-  }
 };
 
 saasplat.controller.rest = class extends saasplat.controller.base {
@@ -128,22 +142,14 @@ saasplat.controller.rest = class extends saasplat.controller.base {
 
     this._isRest = true;
     this._method = '';
-  }  
+  }
 };
 
 saasplat.logic = {};
-saasplat.logic.base = class extends mvc.logic.base {
-  get module() {
-    return getModule(this.__filename);
-  }
-
+saasplat.logic.base = class extends saasplat.base(mvc.logic.base) {
   query(name, module) {
     module = (checkModule(module || this.module));
     return saasplat.model.get(module + name);
-  }
-
-  config(name, value) {
-    return saasplat.config(name, value, this.module);
   }
 };
 
@@ -157,15 +163,12 @@ saasplat.command.publish = async(...msgs) => {
 }
 
 saasplat.repository = cqrs.repository;
-saasplat.aggregate = class extends cqrs.Aggregate {};
+saasplat.aggregate = class extends saasplat.base(cqrs.Aggregate) {};
 
 global.event = cqrs.event;
 global.command = cqrs.command;
 
-saasplat.commandhandler = class extends cqrs.CommandHandler {
-  get module() {
-    return getModule(this.__filename);
-  }
+saasplat.commandhandler = class extends saasplat.base(cqrs.CommandHandler) {
 
   model(name, module) {
     return saasplat.model.get(name, checkModule(module || this.module));
@@ -196,21 +199,18 @@ saasplat.commandhandler = class extends cqrs.CommandHandler {
   }
 };
 
-saasplat.eventhandler = class extends cqrs.EventHandler {
-  get module() {
-    return getModule(this.__filename);
-  }
+saasplat.eventhandler = class extends saasplat.base(cqrs.EventHandler) {
 
   model(name, module) {
     return saasplat.model.get(name, checkModule(module || this.module));
   }
 };
 
-saasplat.migration = class Migration {
-  get module() {
-    return getModule(this.__filename);
-  }
+class spobj{
 
+}
+
+saasplat.migration = class extends saasplat.base(spobj) {
   getRepository(name, id, module, ...porps) {
     return cqrs.repository.getRepository().get(name, id, module || this.module, ...porps);
   }
@@ -237,10 +237,7 @@ saasplat.migration = class Migration {
 
 // 使用Sequelize orm
 saasplat.model = {};
-saasplat.model.base = class {
-  get module() {
-    return getModule(this.__filename);
-  }
+saasplat.model.base = class extends saasplat.base(spobj) {
   schame() {
     return null;
   }
@@ -249,13 +246,10 @@ saasplat.model.base = class {
   }
 }
 
-saasplat.model.migration = class {
+saasplat.model.migration = class extends saasplat.base(spobj) {
   constructor() {
+    super();
     this.queryInterface = orm.data.db.getQueryInterface();
-  }
-
-  get module() {
-    return getModule(this.__filename);
   }
 
   getTableName(tableName, options) {
@@ -397,7 +391,7 @@ saasplat.model.migration = class {
   down() {}
 }
 
-global.TYPE = saasplat.model.TYPE = orm.TYPE;
+global.TYPE = saasplat.model.TYPE = saasplat.model.type = orm.TYPE;
 saasplat.model.get = (name, module) => {
   if (!name) {
     throw new Error(i18n.t('查询对象未找到'));

@@ -1,6 +1,9 @@
 import path from 'path';
 import fs from 'fs';
 
+import { spLogger as logger} from './util/log';
+import i18n from './util/i18n';
+
 const _data = {
   alias: {},
   export: {}
@@ -108,13 +111,20 @@ const _require = (name, flag) => {
 
 const startup = async() => {
   for (let name in _data.alias) {
-    let runMethod = _require(_data.alias[name]).run;
-    if (typeof runMethod == 'function') {
+    const Boot = _require(_data.alias[name]);
+    if (!Boot){
+      logger.warn(i18n.t('无效启动程序'), name);
+      continue;
+    }
+    const boot = new Boot;
+    if (typeof boot.run == 'function') {
       try {
-        await runMethod();
+        await boot.run();
       } catch (err) {
-        saasplat.error(err);
+        logger.error(err);
       }
+    }else{
+      logger.warn(i18n.t('无效启动入口'), name);
     }
   }
 };
