@@ -241,7 +241,7 @@ export default class {
       } )
     let instance = new WatchCompile( this.devPath || this.appPath, devModules, options, this.compileCallback );
     instance.run();
-    mvc.compile( options );
+    //mvc.compile( options );
   }
 
   clearData() {
