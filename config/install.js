@@ -23,20 +23,18 @@ for (var i = 0; i < args.length; i++) {
 
 if (modules.length > 0) {
   var run = function (cfg) {
-    var instance = new app({
+    var instance = new app( Object.assign({
       appPath: path.join(process.cwd(), 'node_modules'),
       // 模块配置文件
       modules: modules.length > 1 ?
         modules :
         modules.length == 1 ?
         modules[0] :
-        [],
-      // 模块配置文件
-      querydb: cfg.querydb,
-      eventdb: cfg.eventdb,
-      systemdb: cfg.systemdb
+        [], 
+    } ,cfg));
+    instance.resource().catch(function(err){
+      console.error(err);
     });
-    instance.resource();
   }
 
   if (args.indexOf('--saasplat')) {

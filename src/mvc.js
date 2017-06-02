@@ -20,7 +20,7 @@ const init = ( appPath, debugMode ) => {
 }
 
 const run = () => {
-  thinkjs.require( 'app' ).run();
+  think.require( 'app' ).run();
 }
 
 export default {

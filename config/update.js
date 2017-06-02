@@ -1,58 +1,54 @@
-require('babel-polyfill');
-var app = require('../lib/app').default;
-var path = require('path');
-var fs = require('fs');
+require( 'babel-polyfill' );
+var app = require( '../lib/app' ).default;
+var path = require( 'path' );
+var fs = require( 'fs' );
 
 var config
-var configfile = path.normalize(path.join(process.cwd(), 'tenant.json'));
-if (fs.existsSync(configfile)) {
-  console.log(configfile)
-  config = JSON.parse(fs.readFileSync(configfile));
+var configfile = path.normalize( path.join( process.cwd(), 'tenant.json' ) );
+if ( fs.existsSync( configfile ) ) {
+  console.log( configfile )
+  config = JSON.parse( fs.readFileSync( configfile ) );
 } else {
-  console.warn('无法加载config', configfile)
+  console.warn( '无法加载config', configfile )
 }
 
-var args = process.args.splice(2);
+var args = process.args.splice( 2 );
 
 var modules = [];
-for (var i = 0; i < args.length; i++) {
-  if (args[i].sbustr(0, 2) != '--') {
-    modules.push(args[i]);
+for ( var i = 0; i < args.length; i++ ) {
+  if ( args[ i ].sbustr( 0, 2 ) != '--' ) {
+    modules.push( args[ i ] );
   }
 }
 
-if (modules.length > 0) {
-  var run = function (cfg) {
-    var instance = new app({
-      appPath: path.join(process.cwd(), 'node_modules'),
+if ( modules.length > 0 ) {
+  var run = function ( cfg ) {
+    var instance = new app( Object.assign( {
+      appPath: path.join( process.cwd(), 'node_modules' ),
       // 模块配置文件
       modules: modules.length > 1 ?
-        modules :
-        modules.length == 1 ?
-        modules[0] :
-        [],
-      // 模块配置文件
-      querydb: cfg.querydb,
-      eventdb: cfg.eventdb,
-      systemdb: cfg.systemdb
-    });
-    instance.migrate();
+        modules : modules.length == 1 ?
+        modules[ 0 ] : [],
+    } ), cfg );
+    instance.migrate().catch( function ( err ) {
+      console.error( err );
+    } );
   }
 
-  if (args.indexOf('--saasplat')) {
+  if ( args.indexOf( '--saasplat' ) ) {
     // 启用了平台部署模式
-    if (config && !config.id) {
-      console.warn('config文件无效');
+    if ( config && !config.id ) {
+      console.warn( 'config文件无效' );
     } else {
-      fetch('http://internal.saas-plat.com/tenant?id=' + config.id).then(rep => rep.json()).then(json => {
-        run(json);
-      });
+      fetch( 'http://internal.saas-plat.com/tenant?id=' + config.id ).then( rep => rep.json() ).then( json => {
+        run( json );
+      } );
     }
   } else {
-    if (config) {
-      run(config);
+    if ( config ) {
+      run( config );
     }
   }
 } else {
-  console.log('node ./config/update.js [--saas-plat] module1 module2')
+  console.log( 'node ./config/update.js [--saas-plat] module1 module2' )
 }

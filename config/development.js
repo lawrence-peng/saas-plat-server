@@ -9,25 +9,25 @@ if ( !fs.existsSync( configfile ) ) {
 } else {
   var config = JSON.parse( fs.readFileSync( configfile ) );
   // load app module
-  var instance = new app( {
+  var instance = new app( Object.assign({
     appPath: path.join( process.cwd(), 'node_modules' ),
-    devPath: path.dirname(process.cwd()),
+    devPath: path.dirname( process.cwd() ),
     // 模块配置文件
-    modules: config.modules || 'saas-plat-*',
-    devModules: path.basename(process.cwd()),
+    modules: 'saas-plat-*',
+    devModules: path.basename( process.cwd() ),
     // 模块配置文件
-    querydb: config.querydb,
-    eventdb: config.eventdb,
-    systemdb: config.systemdb,
     // 服务
-    roles: config.roles || [
+    roles: [
       'web', 'app', 'task', 'workflow'
     ],
-    debug: config.debug || true,
-    logLevel: config.logLevel || 'ALL'
-  } );
+    debug: true,
+    logLevel: 'ALL'
+
+  } ,config));
   instance.compile( {
     log: true
   } );
-  instance.run();
+  instance.run().catch( function ( err ) {
+    console.error( err );
+  } );
 }

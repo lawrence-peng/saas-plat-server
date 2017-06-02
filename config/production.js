@@ -15,19 +15,18 @@ if (fs.existsSync(configfile)) {
 
 var run = function(cfg) {
   // load app module
-  var instance = new app({
+  var instance = new app( Object.assign({
     appPath: path.join(process.cwd(), 'node_modules'),
     // 模块配置文件
-    modules: cfg.modules || 'saas-plat-*',
+    modules:   'saas-plat-*',
     // 模块配置文件
-    querydb: cfg.querydb,
-    eventdb: cfg.eventdb,
-    systemdb: cfg.systemdb,
     // 服务
-    roles: cfg.roles || ['web', 'app', 'task', 'workflow'],
-    logLevel: cfg.logLevel || 'INFO'
+    roles:   ['web', 'app', 'task', 'workflow'],
+    logLevel:   'INFO',
+  },cfg));
+  instance.run().catch(function(err){
+    console.error(err);
   });
-  instance.run();
 }
 
 if (args.indexOf('--saasplat')>-1) {
