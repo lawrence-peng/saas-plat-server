@@ -118,8 +118,7 @@ export default class {
     let devModules = this.devPath ?
       glob.sync( this.devGlob, {
         cwd: this.devPath
-      } ) :
-      [];
+      } ) : [];
     let appModules = glob.sync( this.glob, {
       cwd: this.appPath
     } ).filter( item => devModules.indexOf( item ) < 0 ); // 重名已开发包为主
@@ -245,9 +244,6 @@ export default class {
   }
 
   clearData() {
-
-    logger.warn( i18n.t( '重新加载...' ) );
-
     boots.data.export = {};
     boots.data.alias = {};
 
@@ -304,6 +300,7 @@ export default class {
   }
 
   reload() {
+    logger.warn( i18n.t( '重新加载...' ) );
     this.clearData();
     this.load();
     boots.startup();
