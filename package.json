@@ -42,5 +42,5 @@
     "babel-core": "6.x.x"
   },
   "repository": "http://git.oschina.net/saas-plat/saas-plat-server",
-  "license": "GPL"
+  "license": "GPL-3.0"
 }
