@@ -23,7 +23,7 @@ const run = () => {
   thinkjs.require( 'app' ).run();
 }
 
-export default { 
+export default {
   init,
   run,
   compile: (...args)=>{
