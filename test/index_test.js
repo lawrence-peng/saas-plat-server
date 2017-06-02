@@ -27,9 +27,9 @@ describe('应用', function () {
 
     instance.loadModule();
 
-    expect(instance.module).to.not.be.null;
-    expect(instance.module.length).to.equal(2)
-    expect(instance.module).to.eql(['module1', 'this-module-has-long-name']);
+    expect(instance.modules).to.not.be.null;
+    expect(instance.modules.length).to.equal(2)
+    expect(instance.modules).to.eql(['module1', 'this-module-has-long-name']);
   })
 
   it('安装或升级一个模块', async function () {

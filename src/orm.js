@@ -57,9 +57,6 @@ let _interopSafeRequire = file => {
   if (obj && obj.__esModule && obj.default) {
     return obj.default;
   }
-  if (typeof obj === 'function') {
-    obj.prototype.__filename = file;
-  }
   return obj;
 };
 
@@ -82,7 +79,11 @@ let _safeRequire = file => {
 };
 
 let _loadRequire = (name, filepath) => {
-  let obj = _safeRequire(filepath); 
+  let obj = _safeRequire(filepath);
+  if (typeof obj === 'function') {
+    obj.prototype.__type = name;
+    obj.prototype.__filename = filepath;
+  }
   if (obj) {
     _data.export[name] = obj;
   }
@@ -144,12 +145,12 @@ const get = (module, name) => {
     return _data.defines[modelAlias];
   }
   try {
-    if (!(modelAlias in _data.alias)){
+    if (!(modelAlias in _data.alias)) {
       logger.debug(i18n.t('查询对象不存在'), `${module}/${name}`);
       return null;
     }
     const modelType = _require(_data.alias[modelAlias]);
-    if (!modelType){
+    if (!modelType) {
       logger.warn(i18n.t('查询对象加载失败'), `${module}/${name}`);
       return null;
     }

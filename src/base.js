@@ -51,27 +51,29 @@ saasplat.config = function(name, value, module) {
 saasplat.logEnable = true;
 
 saasplat.log = (...args) => {
-  if (saasplat.logEnable)
-    logger.info.apply(logger, args);
-  };
+  if (saasplat.logEnable) {
+    logger.info(...args);
+  }
+};
 saasplat.warn = (...args) => {
-  //if (saasplat.logEnable)
-  logger.warn.apply(logger, args);
+  logger.warn(...args);
 };
 saasplat.debug = (...args) => {
-  if (saasplat.logEnable)
-    logger.debug.apply(logger, args);
-  };
+  if (saasplat.logEnable) {
+    logger.debug(...args);
+  }
+};
 saasplat.info = (...args) => {
-  if (saasplat.logEnable)
-    logger.info.apply(logger, args);
-  };
+  if (saasplat.logEnable) {
+    logger.info(...args);
+  }
+};
 saasplat.error = (...args) => {
-  //if (saasplat.logEnable)
-  logger.error.apply(logger, args);
+  logger.error(...args);
 };
 
-saasplat.base = (superclass) => class extends superclass {
+saasplat.base = class {};
+saasplat.mixins = (superclass) => class extends superclass {
   log(...args) {
     saasplat.log(...args);
   }
@@ -93,8 +95,12 @@ saasplat.base = (superclass) => class extends superclass {
   }
 
   get module() {
-    return getModule(this.__filename);
+    return this.__type.split('/')[0];
   }
+
+  // static get name() {
+  //   return this.prototype.__type.split('/')[2];
+  // }
 
   config(name, value, module) {
     return saasplat.config(name, value, checkModule(module || this.module));
@@ -111,19 +117,6 @@ saasplat.base = (superclass) => class extends superclass {
 //   }
 // };
 
-const getModule = (filename) => {
-  if (filename.startsWith(saasplat.appPath)) {
-    return filename.substr(saasplat.appPath.length + 1).split(path.sep)[0]
-  }
-  if (filename.startsWith(saasplat.devPath)) {
-    return filename.substr(saasplat.devPath.length + 1).split(path.sep)[0]
-  }
-  if (!saasplat.appPath && !saasplat.devPath) {
-    saasplat.log(i18n.t('服务器未成功启动'));
-  }
-  return null;
-}
-
 const checkModule = (moduleName) => {
   if (typeof moduleName !== 'string') {
     throw new Error(i18n.t('模块不存在'));
@@ -133,7 +126,7 @@ const checkModule = (moduleName) => {
 
 // 控制器使用thinkjs的
 saasplat.controller = {};
-saasplat.controller.base = class extends saasplat.base(mvc.controller.base) {
+saasplat.controller.base = class extends saasplat.mixins(mvc.controller.base) {
 
   publish(...messages) {
     cqrs.bus.publishCommand(messages);
@@ -156,7 +149,7 @@ saasplat.controller.rest = class extends saasplat.controller.base {
 };
 
 saasplat.logic = {};
-saasplat.logic.base = class extends saasplat.base(mvc.logic.base) {
+saasplat.logic.base = class extends saasplat.mixins(mvc.logic.base) {
   query(name, module) {
     module = (checkModule(module || this.module));
     return saasplat.model.get(module + name);
@@ -173,12 +166,12 @@ saasplat.command.publish = async(...msgs) => {
 }
 
 saasplat.repository = cqrs.repository;
-saasplat.aggregate = class extends saasplat.base(cqrs.Aggregate) {};
+saasplat.aggregate = class extends saasplat.mixins(cqrs.Aggregate) {};
 
 global.event = cqrs.event;
 global.command = cqrs.command;
 
-saasplat.commandhandler = class extends saasplat.base(cqrs.CommandHandler) {
+saasplat.commandhandler = class extends saasplat.mixins(cqrs.CommandHandler) {
 
   model(name, module) {
     return saasplat.model.get(name, checkModule(module || this.module));
@@ -209,16 +202,14 @@ saasplat.commandhandler = class extends saasplat.base(cqrs.CommandHandler) {
   }
 };
 
-saasplat.eventhandler = class extends saasplat.base(cqrs.EventHandler) {
+saasplat.eventhandler = class extends saasplat.mixins(cqrs.EventHandler) {
 
   model(name, module) {
     return saasplat.model.get(name, checkModule(module || this.module));
   }
 };
 
-class Obj {}
-
-saasplat.migration = class extends saasplat.base(Obj) {
+saasplat.migration = class extends saasplat.mixins(saasplat.base) {
   getRepository(name, id, module, ...porps) {
     return cqrs.repository.getRepository().get(name, id, module || this.module, ...porps);
   }
@@ -245,7 +236,7 @@ saasplat.migration = class extends saasplat.base(Obj) {
 
 // 使用Sequelize orm
 saasplat.model = {};
-saasplat.model.base = class extends saasplat.base(Obj) {
+saasplat.model.base = class extends saasplat.mixins(saasplat.base) {
   schame() {
     return null;
   }
@@ -254,7 +245,7 @@ saasplat.model.base = class extends saasplat.base(Obj) {
   }
 }
 
-saasplat.model.migration = class extends saasplat.base(Obj) {
+saasplat.model.migration = class extends saasplat.mixins(saasplat.base) {
   constructor() {
     super();
     this.queryInterface = orm.data.db.getQueryInterface();
@@ -417,8 +408,6 @@ saasplat.model.get = (name, module) => {
   return orm.get(module, name);
 };
 
-saasplat.bootstrap = class extends saasplat.base(Obj){
-  run(){
-
-  }
+saasplat.bootstrap = class extends saasplat.mixins(saasplat.base) {
+  run() {}
 }
