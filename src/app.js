@@ -4,7 +4,6 @@ import assert from 'assert';
 import glob from 'glob';
 
 import mvc from './mvc';
-import {app as mvcInstance} from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
@@ -14,8 +13,6 @@ import i18n from './util/i18n';
 import Installs from './util/installs';
 import AutoReload from './util/auto_reload';
 import WatchCompile from './util/watch_compile';
-
-import './base';
 
 //const _modules = ['controller', 'logic', 'service', 'view', 'model', 'event', 'command', 'domain', 'config'];
 const mvcTypes = ['controller', 'logic', 'service']; // model -> orm config -> config
@@ -67,6 +64,8 @@ export default class {
       logger.debug(i18n.t('模块加载完成'), this.modules.length);
       logger.trace(this.modules);
     }
+    mvc.init(this.appPath,this.debugMode);
+    require('./base');
   }
 
   _getPath(module, type) {
@@ -231,7 +230,7 @@ export default class {
     })
     let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
     instance.run();
-    mvcInstance.compile(options);
+    mvc.compile(options);
   }
 
   clearData() {
@@ -515,12 +514,12 @@ export default class {
     this.load();
     this.autoReload();
     if (preload) {
-      mvcInstance.preload();
+      mvc.preload();
       this.preload();
     }
     this.captureError();
     await boots.startup();
-    await mvc.require('app').run();
+    await mvc.run();
     await cqrs.run();
   }
 }

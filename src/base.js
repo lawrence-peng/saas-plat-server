@@ -35,15 +35,15 @@ saasplat.config = function(name, value, module) {
       let val = saasplat.getModuleConfig(module, name);
       if (val)
         return val;
-      return mvc.config(name);
+      return think.config(name);
     } else {
-      return mvc.config(name);
+      return think.config(name);
     }
   } else {
     if (module) {
       saasplat.setModuleConfig(name, value, module)
     } else {
-      mvc.config(name, value);
+      think.config(name, value);
     }
   }
 };
@@ -124,9 +124,11 @@ const checkModule = (moduleName) => {
   return moduleName;
 }
 
+mvc.init(saasplat.appPath || process.cwd(), saasplat.debugMode);
+
 // 控制器使用thinkjs的
 saasplat.controller = {};
-saasplat.controller.base = class extends saasplat.mixins(mvc.controller.base) {
+saasplat.controller.base = class extends saasplat.mixins(think.controller.base) {
 
   publish(...messages) {
     cqrs.bus.publishCommand(messages);
@@ -149,7 +151,7 @@ saasplat.controller.rest = class extends saasplat.controller.base {
 };
 
 saasplat.logic = {};
-saasplat.logic.base = class extends saasplat.mixins(mvc.logic.base) {
+saasplat.logic.base = class extends saasplat.mixins(think.logic.base) {
   query(name, module) {
     module = (checkModule(module || this.module));
     return saasplat.model.get(module + name);
