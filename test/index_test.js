@@ -20,7 +20,7 @@ describe('应用', function () {
   it('启动后停止服务', function () {
     const instance = new App({
       appPath: path.normalize(path.join(__dirname, '../demo')),
-      srcPath: path.normalize(path.join(__dirname, '../demo')),
+      devPath: path.normalize(path.join(__dirname, '../demo')),
       // 模块配置文件
       modules: '*'
     });
