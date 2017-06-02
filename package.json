@@ -1,7 +1,7 @@
 {
   "name": "saas-plat-server",
   "description": "saasplat app server",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "scripts": {
     "start": "node   config/testing.js",
     "debug": "node-debug --web-port=9900 --no-preload config/production.js",
@@ -17,7 +17,7 @@
   "dependencies": {
     "assert": "^1.4.1",
     "babel-polyfill": "^6.13.0",
-    "cqrs-fx": "^1.0.4",
+    "cqrs-fx": "^1.0.6",
     "glob": "^7.1.1",
     "log4js": "^1.1.1",
     "mysql": "^2.10.2",
