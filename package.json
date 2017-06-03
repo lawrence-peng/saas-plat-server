@@ -41,6 +41,6 @@
     "mocha": "^3.3.0",
     "babel-core": "6.x.x"
   },
-  "repository": "http://git.oschina.net/saas-plat/saas-plat-server",
+  "repository": "https://github.com/saas-plat/saas-plat-server",
   "license": "GPL-3.0"
 }
