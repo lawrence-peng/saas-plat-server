@@ -103,8 +103,14 @@ const _require = (name, flag) => {
   return Cls;
 };
 
+const clearData = () => {
+  _data.export = {};
+  _data.alias = {};
+}
+
 export default {
   alias,
+  clearData,
   require : _require,
   data : _data
 };

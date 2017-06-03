@@ -347,7 +347,7 @@ const connect = async(querydb) => {
   if (_data.db) {
     return _data.db;
   }
-  let {
+  const {
     database = 'saasplat_querys',
     username = 'root',
     password = '',
@@ -356,7 +356,7 @@ const connect = async(querydb) => {
   _data.db = new Sequelize(database, username, password, {
     ...options,
     logging: (...args) => {
-      logger.debug(...args)
+      logger.debug(...args);
     }
   });
   // 检查是否能连接
@@ -365,8 +365,15 @@ const connect = async(querydb) => {
 };
 const TYPE = Sequelize; // 类型使用Sequelize
 
+const clearData = () => {
+  _data.export = {};
+  _data.alias = {};
+  _data.defines = {};
+};
+
 export default {
   alias,
+  clearData,
   require : _require,
   data : _data,
   drop,

@@ -1,12 +1,23 @@
 {
-"js": {
+  "js": {
+    "eol":"\n",
     "indent_size": 2,
     "indent_char": " ",
     "indent_level": 0,
+    "wrap_line_length": 80,
+    "brace_style": "collapse-preserve-inline",
+    //"wrap_attributes": "auto",
+    "wrap_attributes_indent_size": 2,
+    //"end_with_newline": true,
+    //"break_chained_methods": true,
     "indent_with_tabs": false,
     "preserve_newlines": true,
-    "max_preserve_newlines": 2,
-    "jslint_happy": true,
-    "e4x": true
+    "jslint_happy": false,
+    "e4x": true,
+    //"wrap_line_length": 10,  // 多少个字符自动换行
+    "max_preserve_newlines": 2,  // 最大连续保留2二个换行符，也就是有一个空行
+    "space_before_conditional":true,  // 在条件语句前有空格
+    "space_in_paren": false,   //括弧添加空格
+    "format_on_save_extensions": ["js", "json"]
   }
 }

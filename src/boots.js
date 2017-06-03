@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 
-import { spLogger as logger} from './util/log';
+import {spLogger as logger} from './util/log';
 import i18n from './util/i18n';
 
 const _data = {
@@ -16,8 +16,8 @@ const getFiles = (file) => {
     for (var fi of files) {
       if (fs.statSync(path.join(file, fi)).isFile())
         dirs.push(fi);
+      }
     }
-  }
   return dirs;
 };
 
@@ -112,7 +112,7 @@ const _require = (name, flag) => {
 const startup = async() => {
   for (let name in _data.alias) {
     const Boot = _require(_data.alias[name]);
-    if (!Boot){
+    if (!Boot) {
       logger.warn(i18n.t('无效启动程序'), name);
       continue;
     }
@@ -123,15 +123,21 @@ const startup = async() => {
       } catch (err) {
         logger.error(err);
       }
-    }else{
+    } else {
       logger.warn(i18n.t('无效启动入口'), name);
     }
   }
 };
 
+const clearData = () => {
+  _data.export = {};
+  _data.alias = {};
+}
+
 export default {
   alias,
-  require: _require,
-  data: _data,
+  clearData,
+  require : _require,
+  data : _data,
   startup
 };

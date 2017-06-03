@@ -48,15 +48,8 @@ const init = (cfg) => {
     },
     log: {
       enable: cfg.debug,
-      // logging: (...args) => {
-      //   logger.debug(...args);
-      // },
-      // warning: (...args) => {
-      //   logger.warn(...args);
-      // },
-      // error: (...args) => {
-      //   logger.error(...args);
-      // }
+      // logging: (...args) => {   logger.debug(...args); }, warning: (...args) => {
+      // logger.warn(...args); }, error: (...args) => {   logger.error(...args); }
     }
   });
 }
@@ -74,8 +67,7 @@ const clear = async() => {
   await cqrsEvent.getStorage().eventStorage.drop();
 }
 
-// A <- B <- C <- D
-// 重溯B时需要连带C的事件，所以这里需要计算modules的所有依赖模块
+// A <- B <- C <- D 重溯B时需要连带C的事件，所以这里需要计算modules的所有依赖模块
 const caluModules = (modules) => {
   const calus = [...modules];
   Object.keys(cqrsCore.fxData.alias).filter(item => item.indexOf(`/event/`) > -1 && modules.indexOf(item.split('/')[0]) > -1).map(alias => cqrsCore._require(alias)).forEach((type) => {
@@ -219,10 +211,8 @@ const up = async(Migration) => {
   await migration.up();
 }
 
-// const down = async(Migration) => {
-//   const migration = new Migration();
-//   await migration.down();
-// }
+// const down = async(Migration) => {   const migration = new Migration(); await
+// migration.down(); }
 
 const revertVersion = async() => {
   const eventStorage = cqrsEvent.getStorage().eventStorage;
@@ -289,9 +279,16 @@ const backMigrate = async() => {
   return true;
 }
 
+const clearData = () => {
+  cqrsCore.fxData.export = {};
+  cqrsCore.fxData.alias = {}
+  cqrsCore.fxData.container = {};
+};
+
 export default {
   init,
   run,
+  clearData,
   clear,
   fxData : cqrsCore.fxData,
   alias : cqrsCore.alias,
@@ -300,4 +297,4 @@ export default {
   revertVersion,
   backMigrate,
   ...cqrs
-}
+};

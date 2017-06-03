@@ -46,6 +46,7 @@ describe('应用', function () {
       logLevel: 'DEBUG'
     });
     await instance.init();
+    instance.clearData();
     await instance.clearEvents();
     instance.compile();
     // 新模块都必须采用回溯方式安装
