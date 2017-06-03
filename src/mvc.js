@@ -3,8 +3,21 @@ import path from 'path';
 
 let app;
 
-const init = (appPath = process.cwd(), debugMode = false) => {
+const init = ({
+  appPath = process.cwd(),
+  debugMode = false,
+  host,
+  port,
+  route_on,
+  ...others
+}) => {
   if (!app) {
+    global._mvcOptions = {
+      host,
+      port,
+      route_on,
+      others
+    };
     app = new thinkjs({
       APP_PATH: __dirname + path.sep + 'mvc',
       RUNTIME_PATH: appPath + path.sep + 'runtime',

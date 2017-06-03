@@ -34,7 +34,11 @@ export default class {
     eventmq,
     debug,
     log,
-    logLevel
+    logLevel,
+    // mvc
+    host,
+    port,
+    route_on
   }) {
     assert(appPath, '应用程序启动路径不能为空');
     this.appPath = path.normalize(appPath);
@@ -65,7 +69,7 @@ export default class {
       logger.debug(i18n.t('模块加载完成'), this.modules.length);
       logger.trace(this.modules);
     }
-    mvc.init(this.appPath, this.debugMode);
+    mvc.init({appPath, debug, host, port, route_on});
     require('./base');
     saasplat.appPath = this.appPath;
     saasplat.devPath = this.devPath;
@@ -478,8 +482,7 @@ export default class {
     if (this.debugMode) {
       logger.debug('debug mode');
     }
-    //this.clearData();
-    // 连接查询库
+    //this.clearData(); 连接查询库
     await orm.connect(this.querydb);
     // 出事话cqrs
     cqrs.init({

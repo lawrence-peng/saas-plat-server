@@ -1,7 +1,7 @@
 {
   "name": "saas-plat-server",
   "description": "saasplat app server",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "scripts": {
     "start": "node   config/testing.js",
     "debug": "node-debug --web-port=9900 --no-preload config/production.js",
