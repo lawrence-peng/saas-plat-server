@@ -1,19 +1,54 @@
-var thinkjs = require('thinkjs');
-var path = require('path');
+import thinkjs from 'thinkjs';
+import path from 'path';
 
-var rootPath = __dirname + path.sep + 'mvc';
+let app;
 
-var instance = new thinkjs({
-  APP_PATH: rootPath ,
-  RUNTIME_PATH: path.dirname(__dirname) + path.sep + 'runtime',
-  ROOT_PATH: rootPath,
-  RESOURCE_PATH: path.dirname(__dirname) + path.sep + 'www',
-  env: 'production' //'development'
-});
+const init = ({
+  appPath = process.cwd(),
+  debugMode = false,
+  host,
+  port,
+  route_on,
+  ...others
+}) => {
+  if (!app) {
+    global._mvcOptions = {
+      host,
+      port,
+      route_on,
+      others
+    };
+    app = new thinkjs({
+      APP_PATH: __dirname + path.sep + 'mvc',
+      RUNTIME_PATH: appPath + path.sep + 'runtime',
+      ROOT_PATH: appPath,
+      RESOURCE_PATH: appPath + path.sep + 'www',
+      env: debugMode
+        ? 'development'
+        : 'production'
+    });
 
-// 需要加载类型
-instance.start();
+    // 需要加载类型
+    app.start();
 
-export const app = instance;
+  }
+  return app;
+}
 
-export default think;
+const run = () => {
+  think.require('app').run();
+}
+
+export default {
+  init,
+  run,
+  clearData : () => {
+    app.clearData();
+  },
+  compile : (...args) => {
+    app.compile(...args);
+  },
+  preload : () => {
+    app.preload();
+  }
+};

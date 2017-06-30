@@ -57,9 +57,6 @@ let _interopSafeRequire = file => {
   if (obj && obj.__esModule && obj.default) {
     return obj.default;
   }
-  if (typeof obj === 'function') {
-    obj.prototype.__filename = file;
-  }
   return obj;
 };
 
@@ -83,7 +80,7 @@ let _safeRequire = file => {
 
 let _loadRequire = (name, filepath) => {
   let obj = _safeRequire(filepath);
-  if (typeof obj == 'function') {
+  if (typeof obj === 'function') {
     obj.prototype.__type = name;
     obj.prototype.__filename = filepath;
   }
@@ -148,12 +145,12 @@ const get = (module, name) => {
     return _data.defines[modelAlias];
   }
   try {
-    if (!(modelAlias in _data.alias)){
+    if (!(modelAlias in _data.alias)) {
       logger.debug(i18n.t('查询对象不存在'), `${module}/${name}`);
       return null;
     }
     const modelType = _require(_data.alias[modelAlias]);
-    if (!modelType){
+    if (!modelType) {
       logger.warn(i18n.t('查询对象加载失败'), `${module}/${name}`);
       return null;
     }
@@ -350,7 +347,7 @@ const connect = async(querydb) => {
   if (_data.db) {
     return _data.db;
   }
-  let {
+  const {
     database = 'saasplat_querys',
     username = 'root',
     password = '',
@@ -359,7 +356,7 @@ const connect = async(querydb) => {
   _data.db = new Sequelize(database, username, password, {
     ...options,
     logging: (...args) => {
-      logger.debug(...args)
+      logger.debug(...args);
     }
   });
   // 检查是否能连接
@@ -368,8 +365,15 @@ const connect = async(querydb) => {
 };
 const TYPE = Sequelize; // 类型使用Sequelize
 
+const clearData = () => {
+  _data.export = {};
+  _data.alias = {};
+  _data.defines = {};
+};
+
 export default {
   alias,
+  clearData,
   require : _require,
   data : _data,
   drop,

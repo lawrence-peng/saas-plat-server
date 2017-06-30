@@ -12,20 +12,18 @@ if (fs.existsSync(configfile)) {
 }
 
 // load app module
-var instance = new app({
+var instance = new app( Object.assign({
   appPath: path.normalize(path.join(__dirname, '/../demo')),
   devPath: path.normalize(path.join(__dirname, '/../demo')),
   // 模块配置文件
   modules: '*',
-  // 模块配置文件
-  querydb: config.querydb,
-  eventdb: config.eventdb,
-  eventmq: config.eventmq,
   // 服务
-  roles: config.roles || ['web', 'app', 'task', 'workflow']
+  roles:   ['web', 'app', 'task', 'workflow']
   //,debugOutput: true
-});
+},config));
 instance.compile({
   log: true
 });
-instance.run();
+instance.run().catch(function(err){
+  console.error(err);
+});

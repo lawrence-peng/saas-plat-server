@@ -10,7 +10,7 @@ const defaultConfig = {
       type: 'console',
       layout: {
         type: 'pattern',
-        pattern: "\x1B[90m[%d]\x1B[39m \x1B[36m[SAAS-PLAT]\x1B[39m %[%m%]"
+        pattern: "\x1B[90m[%d]\x1B[39m \x1B[36m[SAASPLAT]\x1B[39m %[%m%]"
       },
       category: 'SAASPLAT'
     }, {

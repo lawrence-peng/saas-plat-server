@@ -20,16 +20,16 @@ describe('应用', function () {
   it('启动后停止服务', function () {
     const instance = new App({
       appPath: path.normalize(path.join(__dirname, '../demo')),
-      srcPath: path.normalize(path.join(__dirname, '../demo')),
+      devPath: path.normalize(path.join(__dirname, '../demo')),
       // 模块配置文件
       modules: '*'
     });
 
     instance.loadModule();
 
-    expect(instance.module).to.not.be.null;
-    expect(instance.module.length).to.equal(2)
-    expect(instance.module).to.eql(['module1', 'this-module-has-long-name']);
+    expect(instance.modules).to.not.be.null;
+    expect(instance.modules.length).to.equal(2)
+    expect(instance.modules).to.eql(['module1', 'this-module-has-long-name']);
   })
 
   it('安装或升级一个模块', async function () {
@@ -46,6 +46,7 @@ describe('应用', function () {
       logLevel: 'DEBUG'
     });
     await instance.init();
+    instance.clearData();
     await instance.clearEvents();
     instance.compile();
     // 新模块都必须采用回溯方式安装

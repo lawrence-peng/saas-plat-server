@@ -13,8 +13,8 @@ const getFiles = (file) => {
     for (var fi of files) {
       if (fs.statSync(path.join(file, fi)).isFile())
         dirs.push(fi);
+      }
     }
-  }
   return dirs;
 };
 
@@ -40,18 +40,19 @@ const alias = (type, paths) => {
   });
 };
 
-let _interopSafeRequire = file => {
+let _interopSafeRequire = (name, file) => {
   let obj = require(file);
   if (obj && obj.__esModule && obj.default) {
     return obj.default;
   }
   if (typeof obj === 'function') {
+    obj.prototype.__type = name;
     obj.prototype.__filename = file;
   }
   return obj;
 };
 
-let _safeRequire = file => {
+let _safeRequire = (name, file) => {
   // absolute file path is not exist
   if (path.isAbsolute(file)) {
     //no need optimize, only invoked before service start
@@ -59,10 +60,10 @@ let _safeRequire = file => {
       return null;
     }
     //when file is exist, require direct
-    return _interopSafeRequire(file);
+    return _interopSafeRequire(name, file);
   }
   try {
-    return _interopSafeRequire(file);
+    return _interopSafeRequire(name, file);
   } catch (err) {
     log(err);
   }
@@ -70,11 +71,7 @@ let _safeRequire = file => {
 };
 
 let _loadRequire = (name, filepath) => {
-  let obj = _safeRequire(filepath);
-  if (typeof obj == 'function') {
-    obj.prototype.__type = name;
-    obj.prototype.__filename = filepath;
-  }
+  let obj = _safeRequire(name, filepath);
   if (obj) {
     _data.export[name] = obj;
   }
@@ -106,8 +103,14 @@ const _require = (name, flag) => {
   return Cls;
 };
 
+const clearData = () => {
+  _data.export = {};
+  _data.alias = {};
+}
+
 export default {
   alias,
-  require: _require,
-  data:_data,
+  clearData,
+  require : _require,
+  data : _data
 };

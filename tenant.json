@@ -3,6 +3,11 @@
   "eventdb": {
     "url": "mongodb://localhost:27017/testserver1_events"
   },
+  "eventmq": {
+    "name": "eventqueue",
+    "port": 6379,
+    "host": "localhost"
+  },
   "querydb": {
     "username": "root",
     "password": "123456",
@@ -14,5 +19,6 @@
       "min": 0,
       "idle": 10000
     }
-  }
+  },
+  "logLevel": "All"
 }

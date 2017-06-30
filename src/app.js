@@ -4,7 +4,6 @@ import assert from 'assert';
 import glob from 'glob';
 
 import mvc from './mvc';
-import {app as mvcInstance} from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
@@ -15,9 +14,8 @@ import Installs from './util/installs';
 import AutoReload from './util/auto_reload';
 import WatchCompile from './util/watch_compile';
 
-import './base';
-
-//const _modules = ['controller', 'logic', 'service', 'view', 'model', 'event', 'command', 'domain', 'config'];
+// const _modules = ['controller', 'logic', 'service', 'view', 'model', 'event',
+// 'command', 'domain', 'config'];
 const mvcTypes = ['controller', 'logic', 'service']; // model -> orm config -> config
 const ormTypes = ['model', 'datamigration'];
 const cqrsTypes = ['command', 'domain', 'event', 'config', 'migration'];
@@ -36,37 +34,47 @@ export default class {
     eventmq,
     debug,
     log,
-    logLevel
+    logLevel,
+    // mvc
+    host,
+    port,
+    route_on
   }) {
     assert(appPath, '应用程序启动路径不能为空');
-    saasplat.appPath = this.appPath = path.normalize(appPath);
-    saasplat.devPath = this.devPath = devPath && path.normalize(devPath);
+    this.appPath = path.normalize(appPath);
+    this.devPath = devPath && path.normalize(devPath);
     this.devModules = [];
     if (Array.isArray(modules)) {
-      this.module = modules;
-      this.glob = `+(${modules.join('|')})`
-    } else if (typeof modules == 'string') {
+      this.modules = modules;
+      this.glob = `+(${modules.join('|')})`;
+    } else if (typeof modules === 'string') {
       this.glob = modules;
     } else {
       logger.warn(i18n.t('模块不存在'));
     }
     if (Array.isArray(devModules)) {
-      this.module = (this.module || []).concat(devModules);
-    } else if (typeof modules == 'string') {
+      this.modules = (this.modules || []).concat(devModules);
+    } else if (typeof modules === 'string') {
       this.devGlob = devModules;
     }
-    saasplat.debugMode = this.debugMode = debug || false;
+    this.debugMode = debug || false;
     this.devGlob = devModules || '*';
     this.querydb = querydb;
     this.eventdb = eventdb;
-    saasplat.systemdb = this.systemdb = systemdb;
+    this.systemdb = systemdb;
     this.eventmq = eventmq;
     logInit(log);
     logger.setLevel(logLevel || 'INFO');
-    if (this.module) {
-      logger.debug(i18n.t('模块加载完成'), this.module.length);
-      logger.trace(this.module);
+    if (this.modules) {
+      logger.debug(i18n.t('模块加载完成'), this.modules.length);
+      logger.trace(this.modules);
     }
+    mvc.init({appPath, debug, host, port, route_on});
+    require('./base');
+    saasplat.appPath = this.appPath;
+    saasplat.devPath = this.devPath;
+    saasplat.debugMode = this.debugMode;
+    saasplat.systemdb = this.systemdb;
   }
 
   _getPath(module, type) {
@@ -104,8 +112,8 @@ export default class {
   }
 
   loadModule() {
-    if (this.module) {
-      saasplat.modules = this.module;
+    if (this.modules) {
+      saasplat.modules = this.modules;
       saasplat.devModules = this.devModules;
       return;
     }
@@ -114,20 +122,20 @@ export default class {
       : [];
     let appModules = glob.sync(this.glob, {cwd: this.appPath}).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
-    this.module = appModules.concat(devModules);
-    saasplat.modules = this.module;
+    this.modules = appModules.concat(devModules);
+    saasplat.modules = this.modules;
     saasplat.devModules = this.devModules;
-    logger.debug(i18n.t('模块加载完成'), this.module.length);
-    logger.trace(this.module);
+    logger.debug(i18n.t('模块加载完成'), this.modules.length);
+    logger.trace(this.modules);
   }
 
   // 加载扩展的模板
   loadMVC() {
-    think.module = think.module.concat(this.module);
+    think.module = think.module.concat(this.modules);
 
     for (let itemType of mvcTypes) {
-      this.module.forEach(module => {
-        let moduleType = module.replace(/\\/g, '/') + '/' + itemType;
+      this.modules.forEach(module => {
+        let moduleType = module + '/' + itemType;
         let filepath = this._getPath(module, think.dirname[itemType]);
         think.alias(moduleType, filepath, true);
       });
@@ -142,8 +150,8 @@ export default class {
       if (!withMigration && itemType == 'datamigration') {
         continue;
       }
-      this.module.forEach(module => {
-        let moduleType = module.replace(/\\/g, '/') + '/' + itemType;
+      this.modules.forEach(module => {
+        let moduleType = module + '/' + itemType;
         let filepath = this._getPath(module, itemType);
         orm.alias(moduleType, filepath);
       });
@@ -157,8 +165,8 @@ export default class {
       if (!withMigration && itemType == 'migration') {
         continue;
       }
-      this.module.forEach(module => {
-        let name = module.replace(/\\/g, '/');
+      this.modules.forEach(module => {
+        let name = module;
         let moduleType = name + '/' + itemType;
         let filepath = this._getPath(module, itemType);
         cqrs.alias(moduleType, filepath);
@@ -180,7 +188,7 @@ export default class {
       });
     };
     // this的view都在模块文件夹下定义
-    this.module.forEach(module => {
+    this.modules.forEach(module => {
       add(this._getPath(module, think.dirname.view));
     });
     this.templateThink = thinkData.template;
@@ -191,8 +199,8 @@ export default class {
 
   loadBootrstrap() {
     for (let itemType of bootTypes) {
-      this.module.forEach(module => {
-        let name = module.replace(/\\/g, '/');
+      this.modules.forEach(module => {
+        let name = module;
         let moduleType = name + '/' + itemType;
         let filepath = this._getPath(module, itemType);
         boots.alias(moduleType, filepath);
@@ -203,8 +211,8 @@ export default class {
 
   loadConfig() {
     for (let itemType of configTypes) {
-      this.module.forEach(module => {
-        let name = module.replace(/\\/g, '/');
+      this.modules.forEach(module => {
+        let name = module;
         let moduleType = name + '/' + itemType;
         let filepath = this._getPath(module, itemType);
         config.alias(moduleType, filepath);
@@ -231,36 +239,15 @@ export default class {
     })
     let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
     instance.run();
-    mvcInstance.compile(options);
+    //mvc.compile( options );
   }
 
   clearData() {
-
-    logger.warn(i18n.t('重新加载...'));
-
-    boots.data.export = {};
-    boots.data.alias = {};
-
-    config.data.export = {};
-    config.data.alias = {};
-
-    orm.data.export = {};
-    orm.data.alias = {};
-    orm.data.defines = {};
-
-    cqrs.fxData.export = {};
-    cqrs.fxData.alias = {}
-    cqrs.fxData.container = {};
-
-    thinkData.alias = {};
-    thinkData.export = {};
-    thinkData.config = {};
-    thinkData.hook = {};
-    thinkData.template = {};
-    thinkData.middleware = {};
-    thinkData.subController = {};
-    thinkData.route = null;
-
+    boots.clearData();
+    config.clearData();
+    orm.clearData();
+    cqrs.clearData();
+    mvc.clearData();
   }
 
   load() {
@@ -274,7 +261,7 @@ export default class {
   }
 
   getReloadInstance() {
-    let instance = new AutoReload(this.devPath || this.appPath, this.module, () => {
+    let instance = new AutoReload(this.devPath || this.appPath, this.modules, () => {
       this.reload();
     });
     return instance;
@@ -294,6 +281,7 @@ export default class {
   }
 
   reload() {
+    logger.warn(i18n.t('重新加载...'));
     this.clearData();
     this.load();
     boots.startup();
@@ -346,13 +334,13 @@ export default class {
       await cqrs.backMigrate();
       if (await Installs.getInstallMode() == 'resouce') {
         logger.debug(i18n.t('恢复数据库快速表备份'));
-        await orm.restore(modules || this.module, force);
+        await orm.restore(modules || this.modules, force);
       } else {
-        //await cqrs.migrate(this.module, true);
+        //await cqrs.migrate(this.modules, true);
         logger.debug(i18n.t('回退数据库迁移'));
-        await orm.migrate(modules || this.module, true);
+        await orm.migrate(modules || this.modules, true);
       }
-      await Installs.rollback(modules || this.module);
+      await Installs.rollback(modules || this.modules);
       logger.debug(i18n.t('回滚失败模块完成'));
     } else {
       logger.debug(i18n.t('无回滚任务'));
@@ -480,8 +468,7 @@ export default class {
   }
 
   async init(cfg = {}) {
-    // assert(this.querydb, '数据库必须配置');
-    // assert(this.eventmq, '数据库必须配置');
+    // assert(this.querydb, '数据库必须配置'); assert(this.eventmq, '数据库必须配置');
     // assert(this.eventdb, '数据库必须配置');
     if (!this.querydb) {
       logger.warn('querydb未进行配置，已启用默认配置');
@@ -495,8 +482,7 @@ export default class {
     if (this.debugMode) {
       logger.debug('debug mode');
     }
-    this.clearData();
-    // 连接查询库
+    //this.clearData(); 连接查询库
     await orm.connect(this.querydb);
     // 出事话cqrs
     cqrs.init({
@@ -515,12 +501,12 @@ export default class {
     this.load();
     this.autoReload();
     if (preload) {
-      mvcInstance.preload();
+      mvc.preload();
       this.preload();
     }
     this.captureError();
     await boots.startup();
-    await mvc.require('app').run();
+    await mvc.run();
     await cqrs.run();
   }
 }
