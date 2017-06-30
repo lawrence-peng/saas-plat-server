@@ -2,6 +2,8 @@
 saasplat server interface
 */
 import path from 'path';
+import moment from 'moment';
+import _ from 'lodash';
 import mvc from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
@@ -14,10 +16,27 @@ import i18n from './util/i18n';
 
 global.assert = assert;
 
-global.saasplat = {};
+global.saasplat = {
+  ..._
+};
 saasplat.sep = path.sep;
 saasplat.join = path.join;
 saasplat.dirname = path.dirname;
+saasplat.moment = moment;
+
+// 工具类，挑出所有有值的并且不是cqrs的聚合基类的辅助值
+saasplat.toVal = (value, predicate, thisArg) => {
+  const ret = _.omit(value, predicate || _.isUndefined, thisArg);
+  if (!predicate) {
+    delete ret['_version'];
+    delete ret['_branch'];
+    delete ret['_uncommittedEvents'];
+    delete ret['_eventVersion'];
+    delete ret['_domainEventHandlers'];
+    delete ret['_id'];
+  }
+  return ret;
+}
 
 saasplat.getModuleConfig = function (module, name) {
   let config = conf.require(module + '/config/config', true);
@@ -165,8 +184,8 @@ saasplat.command.publish = async(...msgs) => {
 saasplat.repository = cqrs.repository;
 saasplat.aggregate = class extends saasplat.base(cqrs.Aggregate) {};
 
-global.event = cqrs.event;
-global.command = cqrs.command;
+saasplat.event = global.event = cqrs.event;
+saasplat.command = global.command = cqrs.command;
 
 saasplat.commandhandler = class extends saasplat.base(cqrs.CommandHandler) {
 
@@ -206,7 +225,7 @@ saasplat.eventhandler = class extends saasplat.base(cqrs.EventHandler) {
   }
 };
 
-class spobj{
+class spobj {
 
 }
 
