@@ -1,4 +1,5 @@
 {
+  "port": 9900,
   "modules": "saas-plat-*",
   "eventdb": {
     "url": "mongodb://localhost:27017/testserver1_events"

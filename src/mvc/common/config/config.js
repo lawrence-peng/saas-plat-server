@@ -4,7 +4,7 @@
 export default {
   host : global._mvcOptions.host || "127.0.0.1",
   // 内部端口81**开头
-  port : global._mvcOptions.port || 8100,
+  port : global._mvcOptions.port || 9000,
   // 开启自定义路由
   route_on : global._mvcOptions.route_on || false,
   ...global._mvcOptions.others,
