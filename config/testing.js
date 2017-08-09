@@ -1,29 +1,39 @@
+require('babel-register');
 require('babel-polyfill');
-var app = require('../lib/app').default;
-var path = require('path');
-var fs = require('fs');
-
-var config
-var configfile = path.normalize(path.join(__dirname, '../tenant.json'));
-if (fs.existsSync(configfile)) {
-  config = JSON.parse(fs.readFileSync(configfile));
-} else {
-  console.warn('无法加载config', configfile)
-}
+var app = require('../src/app').default;
 
 // load app module
-var instance = new app( Object.assign({
-  appPath: path.normalize(path.join(__dirname, '/../demo')),
-  devPath: path.normalize(path.join(__dirname, '/../demo')),
+var instance = new app({
+  appPath: __dirname + '/../../saas-plat-erp',
   // 模块配置文件
-  modules: '*',
+  modules: '*/*',
+  codePath: 'src',
+  port: 9900,
+  eventdb: {
+    url: 'mongodb://localhost:27017/testserver1_events'
+  },
+  eventmq: {
+    name: 'eventqueue',
+    port: 6379,
+    host: 'localhost'
+  },
+  querydb: {
+    username: 'root',
+    password: '123456',
+    database: 'testserver1_querys',
+    host: 'localhost',
+    dialect: 'mysql',
+    pool: {
+      max: 5,
+      min: 0,
+      idle: 10000
+    }
+  },
+  logLevel: 'All',
   // 服务
-  roles:   ['web', 'app', 'task', 'workflow']
-  //,debugOutput: true
-},config));
-instance.compile({
-  log: true
+  roles: ['web', 'app', 'task', 'workflow']
+  // ,debugOutput: true
 });
-instance.run().catch(function(err){
+instance.run().catch(function(err) {
   console.error(err);
 });
