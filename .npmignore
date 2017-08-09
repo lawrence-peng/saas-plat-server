@@ -1,3 +1,10 @@
 node_modules/
 runtime/
 www/
+demo/
+test/
+*.bat
+.babelrc
+.eslintrc
+.jsbeautifyrc
+.jshintrc
