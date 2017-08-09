@@ -35,17 +35,18 @@ export default class {
     debug,
     log,
     logLevel,
+    codePath = 'app',
     // mvc
     host,
     port,
     route_on
   }) {
     assert(appPath, '应用程序启动路径不能为空');
+    this.codePath = codePath;
     this.appPath = path.normalize(appPath);
     this.devPath = devPath && path.normalize(devPath);
     this.devModules = [];
     if (Array.isArray(modules)) {
-      this.modules = modules;
       this.glob = `+(${modules.join('|')})`;
     } else if (typeof modules === 'string') {
       this.glob = modules;
@@ -53,22 +54,19 @@ export default class {
       logger.warn(i18n.t('模块不存在'));
     }
     if (Array.isArray(devModules)) {
-      this.modules = (this.modules || []).concat(devModules);
-    } else if (typeof modules === 'string') {
+      this.devGlob = `+(${modules.join('|')})`;
+    } else if (typeof devModules === 'string') {
       this.devGlob = devModules;
+    }else{
+      this.devGlob = '*';
     }
     this.debugMode = debug || false;
-    this.devGlob = devModules || '*';
     this.querydb = querydb;
     this.eventdb = eventdb;
     this.systemdb = systemdb;
     this.eventmq = eventmq;
     logInit(log);
     logger.setLevel(logLevel || 'INFO');
-    if (this.modules) {
-      logger.debug(i18n.t('模块加载完成'), this.modules.length);
-      logger.trace(this.modules);
-    }
     mvc.init({appPath, debug, host, port, route_on});
     require('./base');
     saasplat.appPath = this.appPath;
@@ -79,7 +77,7 @@ export default class {
 
   _getPath(module, type) {
     let mod = module + path.sep;
-    let subPath = 'app';
+    let subPath = this.codePath;
     if (!this.moduleConfigs) {
       this.moduleConfigs = {};
     }
@@ -113,8 +111,8 @@ export default class {
 
   loadModule() {
     if (this.modules) {
-      saasplat.modules = this.modules;
-      saasplat.devModules = this.devModules;
+      // saasplat.modules = this.modules;
+      // saasplat.devModules = this.devModules;
       return;
     }
     let devModules = this.devPath
