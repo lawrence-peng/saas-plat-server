@@ -7,6 +7,7 @@ import _ from 'lodash';
 import mvc from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
+import task from './task';
 import {
   spLogger as logger
 } from './util/log';

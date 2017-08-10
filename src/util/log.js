@@ -63,3 +63,4 @@ export const spLogger = log4js.getLogger('SAASPLAT');
 export const mvcLogger = log4js.getLogger('ThinkJS');
 export const cqrsLogger = log4js.getLogger('CQRS');
 export const ormLogger = log4js.getLogger('Sequelize');
+export const taskLogger = log4js.getLogger('Task');

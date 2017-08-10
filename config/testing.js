@@ -31,7 +31,7 @@ var instance = new app({
   },
   logLevel: 'All',
   // 服务
-  roles: ['web', 'app', 'task', 'workflow']
+  roles: ['app', 'task', 'workflow']
   // ,debugOutput: true
 });
 instance.run().catch(function(err) {
