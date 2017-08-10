@@ -2,8 +2,9 @@
   "name": "saas-plat-server",
   "description": "saasplat app server",
   "version": "1.0.11",
+  "main": "lib/app.js",
   "scripts": {
-    "start": "node   config/testing.js",
+    "start": "node config/testing.js",
     "debug": "node-debug --web-port=9900 --no-preload config/production.js",
     "compile": "babel src/ --out-dir lib/ --source-maps",
     "watch": "babel --watch src/ --out-dir lib/ --source-maps",
