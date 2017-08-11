@@ -1,7 +1,7 @@
 {
   "name": "saas-plat-server",
   "description": "saasplat app server",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "main": "lib/app.js",
   "scripts": {
     "start": "node config/testing.js",
