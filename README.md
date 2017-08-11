@@ -109,7 +109,42 @@ eventhandler注意事项：
 
 ### 定时任务
 
+周期性执行一个command或者定时执行一个command
 
+```js
+saasplat.task.add(taskname, module, cron/date, command, data, ...);
+```
+
+定时任务一般在evenghandler中调用，直接调用基类函数
+
+```js
+export default class extends saasplat.eventhandler {
+  async xxxCreated({
+    this.addTask(taskname, cron/date, command, data, ...);
+  })
+}
+```
+
+cron 执行周期任务
+
+cron格式  
+```
+*    *    *    *    *    *
+┬    ┬    ┬    ┬    ┬    ┬
+│    │    │    │    │    |
+│    │    │    │    │    └ day of week (0 - 7) (0 or 7 is Sun)
+│    │    │    │    └───── month (1 - 12)
+│    │    │    └────────── day of month (1 - 31)
+│    │    └─────────────── hour (0 - 23)
+│    └──────────────────── minute (0 - 59)
+└───────────────────────── second (0 - 59, OPTIONAL)
+```
+
+date 定时任务
+
+```
+new Date(2012, 11, 21, 5, 30, 0)
+```
 
 ### 工作流
 
