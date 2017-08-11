@@ -1,19 +1,19 @@
 export const IP = 'localhost'
 
 export const querydb = {
-  username: "root",
-  password: "123456",
-  database: "testserver1_querys",
+  username: 'root',
+  password: '123456',
+  database: 'testserver1_querys',
   host: IP,
-  dialect: "mysql"
+  dialect: 'mysql'
 }
 
 export const systemdb = {
-  username: "root",
-  password: "123456",
-  database: "testserver1_sys",
+  username: 'root',
+  password: '123456',
+  database: 'testserver1_sys',
   host: IP,
-  dialect: "mysql"
+  dialect: 'mysql'
 }
 
 export const eventmq = {
