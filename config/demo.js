@@ -18,8 +18,6 @@ var instance = new app(Object.assign({
   devPath: path.normalize(path.join(__dirname, '/../demo')),
   // 模块配置文件
   modules: '*',
-  // 服务
-  roles: ['web', 'app', 'task', 'workflow']
   //,debugOutput: true
 }, config));
 

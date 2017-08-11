@@ -29,9 +29,14 @@ var instance = new app({
       idle: 10000
     }
   },
+  systemdb: {
+    username: 'root',
+    password: '123456',
+    database: 'testserver1_sys',
+    host: 'localhost',
+    dialect: 'mysql'
+  },
   logLevel: 'All',
-  // 服务
-  roles: ['app', 'task', 'workflow']
   // ,debugOutput: true
 });
 instance.run().catch(function(err) {

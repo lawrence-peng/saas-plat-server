@@ -68,7 +68,7 @@ export default class {
     logInit(log);
     logger.setLevel(logLevel || 'INFO');
     mvc.init({appPath, debug, host, port, route_on});
-    require('./base');
+    require('./base');  // 需要等thinkjs加载完controller
     saasplat.appPath = this.appPath;
     saasplat.devPath = this.devPath;
     saasplat.debugMode = this.debugMode;
@@ -482,13 +482,18 @@ export default class {
     }
     //this.clearData(); 连接查询库
     await orm.connect(this.querydb);
-    // 出事话cqrs
+    // 初始化 cqrs
     cqrs.init({
       debug: this.debugMode,
       eventmq: this.eventmq,
       eventdb: this.eventdb,
       ...cfg.cqrs
-    })
+    });
+    // task
+    await task.init({
+      sysdb: this.systemdb,
+      ...cfg.task
+    });
     // 重置
     this.moduleConfigs = {};
   }
@@ -503,8 +508,10 @@ export default class {
       this.preload();
     }
     this.captureError();
+    // todo： 如下服务启用哪些以后需要根据分开部署的角色决定
     await boots.startup();
     await mvc.run();
     await cqrs.run();
+    await task.run();
   }
 }

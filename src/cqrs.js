@@ -18,6 +18,8 @@ const _dirname = {
 let eventWorker;
 
 const init = (cfg) => {
+  // todo： 这里配置以后需要根据启用的角色不同进行不同配置
+  //        比如启用了非应用服务器模式，这里需要配置commandBus未应用服务器的mq
   config.init({
     bus: {
       commandBus: 'direct', // 命令采用同步执行

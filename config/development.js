@@ -15,10 +15,6 @@ if (!fs.existsSync(configfile)) {
     // 模块配置文件
     modules: 'saas-plat-*',
     devModules: path.basename(process.cwd()),
-    // 模块配置文件 服务
-    roles: [
-      'web', 'app', 'task', 'workflow'
-    ],
     debug: true,
     logLevel: 'INFO'
   }, config));

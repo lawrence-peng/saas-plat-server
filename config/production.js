@@ -20,8 +20,6 @@ var run = function(cfg) {
     // 模块配置文件
     modules:   'saas-plat-*',
     // 模块配置文件
-    // 服务
-    roles:   ['web', 'app', 'task', 'workflow'],
     logLevel:   'INFO',
   },cfg));
   instance.run().catch(function(err){

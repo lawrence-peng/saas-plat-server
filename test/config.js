@@ -8,6 +8,14 @@ export const querydb = {
   dialect: "mysql"
 }
 
+export const systemdb = {
+  username: "root",
+  password: "123456",
+  database: "testserver1_sys",
+  host: IP,
+  dialect: "mysql"
+}
+
 export const eventmq = {
   host: IP
 }
