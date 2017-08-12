@@ -197,6 +197,11 @@ saasplat.commandhandler = class extends saasplat.mixins(cqrs.CommandHandler) {
   }
 
   getRepository(name, module) {
+    const sp = name.split('/');
+    if (sp.length > 1) {
+      module = sp.shift();
+      name = sp.join('/');
+    }
     return {
       get: async(id, ...options) => {
         let rep = await this.repository.get(name, id, checkModule(module ||
@@ -307,7 +312,7 @@ saasplat.model.migration = class extends saasplat.mixins(saasplat.base) {
     return new Promise((resolve) => {
       const module = options.module || this.module;
       this.showAllTables(options).then(tableNames => {
-        const skips = tableNames.filter(name => name.split('_')[0] !=
+        const skips = tableNames.filter(name => name.split('_')[0] !==
           module);
         const sks = (options.skip || []).map(name =>
           `${module}_${name}`);
@@ -329,7 +334,7 @@ saasplat.model.migration = class extends saasplat.mixins(saasplat.base) {
     return this.queryInterface.showAllTables(options, ...others).then(
       tableNames => {
         const module = options.module || this.module;
-        return tableNames.filter(name => name.split('_')[0] == module).map(
+        return tableNames.filter(name => name.split('_')[0] === module).map(
           name => {
             return name.substr(name.indexOf('_') + 1);
           });
@@ -357,7 +362,7 @@ saasplat.model.migration = class extends saasplat.mixins(saasplat.base) {
       options), attributeName, dataTypeOrOptions, options, ...others);
   }
 
-  renameColumn(tableName, attrNameBefore, attrNameAfter, options, ...others) {
+  renameColumn(tableName, attributeName, attrNameBefore, attrNameAfter, options, ...others) {
     return this.queryInterface.renameColumn(this.getTableName(tableName,
       options), attributeName, attrNameAfter, options, ...others);
   }
@@ -373,7 +378,7 @@ saasplat.model.migration = class extends saasplat.mixins(saasplat.base) {
       options), options, ...others);
   }
 
-  nameIndexes(indexes, rawTablename, ...others) {
+  nameIndexes(indexes, rawTablename, options, ...others) {
     return this.queryInterface.nameIndexes((indexes || []).map(name => this
       .getTableName(name, options)), this.getTableName(rawTablename,
       options), ...others);
@@ -469,7 +474,7 @@ saasplat.model.get = (name, module) => {
   }
   if (!module) {
     const mn = name.split('/');
-    if (mn.length == 2) {
+    if (mn.length === 2) {
       module = mn[0];
       name = mn[1];
     }
