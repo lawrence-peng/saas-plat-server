@@ -1,9 +1,10 @@
+import { version } from '../../../../package.json';
 
 export default class extends think.controller.base {
 
   getAction() {
     return this.success({
-      version: 'v1',
+      version,
       date: (new Date()).getTime()
     });
   }

@@ -9,6 +9,7 @@ import cqrs from './cqrs';
 import orm from './orm';
 import task from './task';
 import dataSrv from './data';
+import workflow from './workflow';
 import {
   spLogger as logger
 } from './util/log';
@@ -126,6 +127,7 @@ saasplat.mixins = (superclass) => class extends superclass {
 };
 
 saasplat.data = dataSrv;
+saasplat.workflow = workflow;
 
 // // 界面通过元数据配置方式定义
 // saasplat.view = {};

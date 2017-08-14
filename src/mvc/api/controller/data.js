@@ -1,4 +1,4 @@
-import { version } from '../../../../package.json';
+
 
 export default class extends think.controller.base {
   async insertAction() {
