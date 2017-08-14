@@ -8,6 +8,8 @@ import cqrs from './cqrs';
 import orm from './orm';
 import config from './config';
 import boots from './boots';
+import task from './task';
+import dataSrv from './data';
 import {init as logInit, spLogger as logger} from './util/log';
 import i18n from './util/i18n';
 import Installs from './util/installs';
@@ -468,6 +470,9 @@ export default class {
   async init(cfg = {}) {
     // assert(this.querydb, '数据库必须配置'); assert(this.eventmq, '数据库必须配置');
     // assert(this.eventdb, '数据库必须配置');
+    if (!this.datadb) {
+      logger.warn('datadb未进行配置，已启用默认配置');
+    }
     if (!this.querydb) {
       logger.warn('querydb未进行配置，已启用默认配置');
     }
@@ -480,6 +485,8 @@ export default class {
     if (this.debugMode) {
       logger.debug('debug mode');
     }
+    //
+    await dataSrv.init(this.datadb);
     //this.clearData(); 连接查询库
     await orm.connect(this.querydb);
     // 初始化 cqrs

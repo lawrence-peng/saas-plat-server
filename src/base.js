@@ -8,6 +8,7 @@ import mvc from './mvc';
 import cqrs from './cqrs';
 import orm from './orm';
 import task from './task';
+import dataSrv from './data';
 import {
   spLogger as logger
 } from './util/log';
@@ -123,6 +124,8 @@ saasplat.mixins = (superclass) => class extends superclass {
     return saasplat.config(name, value, checkModule(module || this.module));
   }
 };
+
+saasplat.data = dataSrv;
 
 // // 界面通过元数据配置方式定义
 // saasplat.view = {};
