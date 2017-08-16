@@ -1,9 +1,9 @@
 require('babel-register');
 require('babel-polyfill');
-var app = require('../src/app').default;
+var App = require('../src/app').default;
 
 // load app module
-var instance = new app({
+var instance = new App({
   appPath: __dirname + '/../../saas-plat-erp',
   // 模块配置文件
   modules: '*/*',
@@ -36,7 +36,7 @@ var instance = new app({
     host: 'localhost',
     dialect: 'mysql'
   },
-  logLevel: 'All',
+  logLevel: 'All'
   // ,debugOutput: true
 });
 instance.run().catch(function(err) {
