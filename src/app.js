@@ -10,7 +10,7 @@ import config from './config';
 import boots from './boots';
 import task from './task';
 import dataSrv from './data';
-import {init as logInit, spLogger as logger} from './util/log';
+import { init as logInit, spLogger as logger } from './util/log';
 import i18n from './util/i18n';
 import Installs from './util/installs';
 import AutoReload from './util/auto_reload';
@@ -30,10 +30,14 @@ export default class {
     devPath,
     modules,
     devModules,
-    querydb,
-    eventdb,
-    systemdb,
+    datadb,  // 数据存储服务mongodb
+    querydb, // 查询存储 mysql
+    eventdb, // 事件存储 mongodb
+    systemdb, // 系统功能 mysql
     eventmq,
+    eventBus,
+    eventStoreage,
+    snapshotStoreage,
     debug,
     log,
     logLevel,
@@ -59,18 +63,22 @@ export default class {
       this.devGlob = `+(${modules.join('|')})`;
     } else if (typeof devModules === 'string') {
       this.devGlob = devModules;
-    }else{
+    } else {
       this.devGlob = '*';
     }
     this.debugMode = debug || false;
+    this.datadb = datadb;
     this.querydb = querydb;
     this.eventdb = eventdb;
     this.systemdb = systemdb;
     this.eventmq = eventmq;
+    this.eventBus = eventBus;
+    this.eventStoreage = eventStoreage;
+    this.snapshotStoreage = snapshotStoreage;
     logInit(log);
     logger.setLevel(logLevel || 'INFO');
-    mvc.init({appPath, debug, host, port, route_on});
-    require('./base');  // 需要等thinkjs加载完controller
+    mvc.init({ appPath, debug, host, port, route_on });
+    require('./base'); // 需要等thinkjs加载完controller
     saasplat.appPath = this.appPath;
     saasplat.devPath = this.devPath;
     saasplat.debugMode = this.debugMode;
@@ -117,10 +125,10 @@ export default class {
       // saasplat.devModules = this.devModules;
       return;
     }
-    let devModules = this.devPath
-      ? glob.sync(this.devGlob, {cwd: this.devPath})
-      : [];
-    let appModules = glob.sync(this.glob, {cwd: this.appPath}).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
+    let devModules = this.devPath ?
+      glob.sync(this.devGlob, { cwd: this.devPath }) : [];
+    let appModules = glob.sync(this.glob, { cwd: this.appPath }).filter(item =>
+      devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
     this.modules = appModules.concat(devModules);
     saasplat.modules = this.modules;
@@ -232,12 +240,13 @@ export default class {
         options.clearCacheHandler(changedFiles);
       }
     };
-    const devModules = glob.sync(this.devPath
-      ? this.devGlob
-      : this.glob, {
-      cwd: this.devPath || this.appPath
-    })
-    let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
+    const devModules = glob.sync(this.devPath ?
+      this.devGlob :
+      this.glob, {
+        cwd: this.devPath || this.appPath
+      })
+    let instance = new WatchCompile(this.devPath || this.appPath, devModules,
+      options, this.compileCallback);
     instance.run();
     //mvc.compile( options );
   }
@@ -261,9 +270,10 @@ export default class {
   }
 
   getReloadInstance() {
-    let instance = new AutoReload(this.devPath || this.appPath, this.modules, () => {
-      this.reload();
-    });
+    let instance = new AutoReload(this.devPath || this.appPath, this.modules,
+      () => {
+        this.reload();
+      });
     return instance;
   }
 
@@ -289,9 +299,9 @@ export default class {
 
   preload() {
     let startTime = Date.now();
-    for (let name in thinkData.alias) {
-      think.require(thinkData.alias[name]);
-    }
+    // for (let name in thinkData.alias) {
+    //   think.require(thinkData.alias[name]);
+    // }
     for (let name in orm.data.alias) {
       orm.require(orm.data.alias[name]);
     }
@@ -378,7 +388,13 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(modules.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
+      await Installs.save(modules.map(name => ({
+        name,
+        version: this.moduleConfigs[
+          name].version,
+        installDate: new Date(),
+        status: 'waitCommit'
+      })));
       await Installs.setInstallMode('migrate');
       // 升级数据
       await orm.migrate(modules);
@@ -428,7 +444,13 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(modules.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
+      await Installs.save(modules.map(name => ({
+        name,
+        version: this.moduleConfigs[
+          name].version,
+        installDate: new Date(),
+        status: 'waitCommit'
+      })));
       await Installs.setInstallMode('resource');
       // 之前可能已经安装过，但是卸载后会保留数据表，需要备份
       await orm.backup(modules);
@@ -476,10 +498,10 @@ export default class {
     if (!this.querydb) {
       logger.warn('querydb未进行配置，已启用默认配置');
     }
-    if (!this.eventdb) {
+    if (!this.eventStoreage && !this.eventdb) {
       logger.warn('eventdb未进行配置，已启用默认配置');
     }
-    if (!this.eventmq) {
+    if (!this.eventBus && !this.eventmq) {
       logger.warn('eventmq未进行配置，已启用默认配置');
     }
     if (this.debugMode) {
@@ -487,13 +509,16 @@ export default class {
     }
     //
     await dataSrv.init(this.datadb);
-    //this.clearData(); 连接查询库
+    // this.clearData(); 连接查询库
     await orm.connect(this.querydb);
     // 初始化 cqrs
     cqrs.init({
       debug: this.debugMode,
       eventmq: this.eventmq,
       eventdb: this.eventdb,
+      eventBus: this.eventBus,
+      eventStoreage: this.eventStoreage,
+      snapshotStoreage: this.snapshotStoreage,
       ...cfg.cqrs
     });
     // task
@@ -506,7 +531,7 @@ export default class {
   }
 
   async run(preload) {
-    logger.info(i18n.t('启动 saasplat-server...'));
+    logger.info(i18n.t('启动 saas-plat-server...'));
     await this.init();
     this.load();
     this.autoReload();
@@ -518,6 +543,17 @@ export default class {
     // todo： 如下服务启用哪些以后需要根据分开部署的角色决定
     await boots.startup();
     await mvc.run();
+    await cqrs.run();
+    await task.run();
+  }
+
+  async test() {
+    logger.info(i18n.t('测试 saas-plat-server...'));
+    await this.init();
+    this.load();
+    this.preload();
+    // 测试只需要启用如下服务
+    await boots.startup();
     await cqrs.run();
     await task.run();
   }

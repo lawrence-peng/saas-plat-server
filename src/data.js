@@ -44,7 +44,8 @@ const _getQuery = (spec) => {
 
 const count = async(spec) => {
   const db = await connect();
-  return await db.collection(COLLECTION).count(spec);
+  const ret = await db.collection(COLLECTION).count(spec);
+  return ret;
 }
 
 const insert = async(...data) => {

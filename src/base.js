@@ -183,8 +183,8 @@ saasplat.logic.base = class extends saasplat.mixins(think.logic.base) {
 // 领域层使用cqrs
 
 saasplat.command = {};
-saasplat.command.publish = async(...msgs) => {
-  logger.debug(i18n.t('发送命令'), ...msgs.map(item => item.name));
+saasplat.publish = saasplat.command.publish = async(...msgs) => {
+  logger.debug(i18n.t('发送命令'));
   logger.trace(...msgs);
   await cqrs.bus.publishCommand(...msgs);
 }
@@ -192,8 +192,9 @@ saasplat.command.publish = async(...msgs) => {
 saasplat.repository = cqrs.repository;
 saasplat.aggregate = class extends saasplat.mixins(cqrs.Aggregate) {};
 
-saasplat.event = global.event = cqrs.event;
-saasplat.command = global.command = cqrs.command;
+// 修饰符
+global.event = cqrs.event;
+global.command = cqrs.command;
 
 saasplat.commandhandler = class extends saasplat.mixins(cqrs.CommandHandler) {
 
@@ -280,7 +281,9 @@ saasplat.migration = class extends saasplat.mixins(saasplat.base) {
 }
 
 // 使用Sequelize orm
-saasplat.model = {};
+saasplat.model = (...args) => {
+  return saasplat.model.get(...args);
+};
 saasplat.model.base = class extends saasplat.mixins(saasplat.base) {
   schame() {
     return null;
@@ -367,7 +370,8 @@ saasplat.model.migration = class extends saasplat.mixins(saasplat.base) {
       options), attributeName, dataTypeOrOptions, options, ...others);
   }
 
-  renameColumn(tableName, attributeName, attrNameBefore, attrNameAfter, options, ...others) {
+  renameColumn(tableName, attributeName, attrNameBefore, attrNameAfter,
+    options, ...others) {
     return this.queryInterface.renameColumn(this.getTableName(tableName,
       options), attributeName, attrNameAfter, options, ...others);
   }

@@ -23,7 +23,7 @@ const init = (cfg) => {
   config.init({
     bus: {
       commandBus: 'direct', // 命令采用同步执行
-      eventBus: 'mq',
+      eventBus: cfg.eventBus || 'mq',
       eventMQ: {
         name: 'eventqueue',
         port: 6379,
@@ -34,7 +34,8 @@ const init = (cfg) => {
     },
     event: {
       storage: 'mongo_domain_event',
-      collection: 'events'
+      collection: 'events',
+      ...cfg.eventStoreage
     },
     repository: {
       type: 'event_sourced'
@@ -42,14 +43,15 @@ const init = (cfg) => {
     snapshot: {
       provider: 'event_number',
       storage: 'mongo', // redis mysql mongo memory ...
-      collection: 'snapshots'
+      collection: 'snapshots',
+      ...cfg.snapshotStoreage
     },
     mongo: {
       url: 'mongodb://localhost:27017/cqrs',
       ...cfg.eventdb
     },
     log: {
-      enable: cfg.debug,
+      enable: cfg.debug
       // logging: (...args) => {   logger.debug(...args); }, warning: (...args) => {
       // logger.warn(...args); }, error: (...args) => {   logger.error(...args); }
     }

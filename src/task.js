@@ -61,7 +61,7 @@ const connect = async(sysdb) => {
       username = 'root',
       password = '',
       ...options
-  } = sysdb;
+  } = (sysdb || {});
   db = new Sequelize(database, username, password, {
     ...options,
     logging: (...args) => {
@@ -165,8 +165,8 @@ const refresh = async() => {
   }
 }
 
-const init = async({ systemdb }) => {
-  await connect(systemdb);
+const init = async({ sysdb }) => {
+  await connect(sysdb);
   await createTable();
   await Task.sync();
 }
