@@ -3,6 +3,7 @@ runtime/
 www/
 demo/
 test/
+src/
 *.bat
 .babelrc
 .eslintrc
