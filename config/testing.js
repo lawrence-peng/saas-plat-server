@@ -1,4 +1,5 @@
 require('babel-polyfill');
+var path = require('path');
 var App = require('../lib/app').default;
 
 module.exports = function(args) {
@@ -9,9 +10,10 @@ module.exports = function(args) {
     cfg = args.cfg;
 
   // 测试db全部配置成mysql
+  var root = process.cwd();
   var instance = new App(Object.assign({
-    appPath: process.cwd(),
-    modules: '*',
+    appPath: path.dirname(root),
+    modules: path.basename(root),
     codePath: 'src',
     eventBus: 'direct',
     // port: 9900,
@@ -49,7 +51,8 @@ module.exports = function(args) {
       host: 'localhost',
       dialect: 'mysql'
     }, db),
-    logLevel: 'All',
+    debug: true,
+    logLevel: 'INFO',
     // ,debugOutput: true
   }, cfg));
   return instance.test();

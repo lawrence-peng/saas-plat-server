@@ -59,7 +59,7 @@ const init = (cfg) => {
 }
 
 const run = async() => {
-  if (eventWorker) {
+  if (eventWorker || config.get('bus').eventBus !== 'mq') {
     return;
   }
   eventWorker = new MqWorker('event');
@@ -296,6 +296,7 @@ export default {
   clear,
   fxData : cqrsCore.fxData,
   alias : cqrsCore.alias,
+  require: cqrsCore._require,
   resource,
   migrate,
   revertVersion,

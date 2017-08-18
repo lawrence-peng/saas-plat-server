@@ -4,7 +4,7 @@ import path from 'path';
 let app;
 
 const init = ({
-  appPath = process.cwd(),
+  appPath = path.dirname(process.cwd()),
   debugMode = false,
   host,
   port,

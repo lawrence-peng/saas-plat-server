@@ -306,7 +306,7 @@ export default class {
       orm.require(orm.data.alias[name]);
     }
     for (let name in cqrs.fxData.alias) {
-      cqrs._require(cqrs.fxData.alias[name]);
+      cqrs.require(cqrs.fxData.alias[name]);
     }
     for (let name in config.data.alias) {
       config.require(config.data.alias[name]);
