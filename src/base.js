@@ -232,6 +232,27 @@ saasplat.commandhandler = class extends saasplat.mixins(cqrs.CommandHandler) {
   async commit() {
     await cqrs.repository.getRepository().commit();
   }
+
+  async saveAndCommit(...aggregates){
+    await this.save(...aggregates);
+    await this.commit();
+  }
+
+  async getWorkflows(name, module){
+  	return await workflow.getWorkflows(name, checkModule(module || this.module));
+  }
+
+  async getWorkflow(id){
+  	return await workflow.status(id);
+  }
+
+  async startWorkflow(id, wfName){
+  	return await workflow.audit(id, wfName);
+  }
+  
+  async cancelWorkflow(id){
+	return await workflow.cancel(id);
+  }
 };
 
 saasplat.eventhandler = class extends saasplat.mixins(cqrs.EventHandler) {

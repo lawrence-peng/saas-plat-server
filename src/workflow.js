@@ -1,26 +1,26 @@
 
 // 获取单据定义的工作流
-const getWorkFlows = async(vId) =>{
+const getWorkFlows = async(name, module) =>{
 
 }
 
 // 开始流转
-const audit = async(vId, wfName) => {
+const audit = async(id, wfName) => {
 
 }
 
 // 当前状态
-const status = async(wfId) => {
+const status = async(id) => {
 
 }
 
 // 下一步
-const next = async(wfId, agreeOrNot, reason, approver) => {
+const next = async(id, agreeOrNot, reason, approver) => {
 
 }
 
 // 取消全部流转
-const cancel = async(wfId) => {
+const cancel = async(id) => {
 
 }
 
@@ -30,11 +30,11 @@ const reject = async(wfId) => {
 }
 
 // 是否流转完成并通过
-const isPassed = async(wfId) => {
+const isPassed = async(id) => {
   return true;
 }
 
-const isEnd = async(wfId) => {
+const isEnd = async(id) => {
   return true;
 }
 
