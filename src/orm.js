@@ -160,9 +160,9 @@ const get = (module, name) => {
     }
     _data.defines[modelAlias] = define(module, name, typeof modelInst.schame == 'function'
       ? modelInst.schame()
-      : {}, typeof modelInst.options == 'function'
+      : (modelInst.schame || {}), typeof modelInst.options == 'function'
       ? modelInst.options()
-      : {});
+      : (modelInst.options || {}));
     return _data.defines[modelAlias];
   } catch (e) {
     logger.warn(e);
