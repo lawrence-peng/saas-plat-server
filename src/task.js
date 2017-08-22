@@ -25,7 +25,7 @@ const createTable = async() => {
     command: { type: Sequelize.STRING(255), allowNull: false }, // 执行的命令
     data: Sequelize.STRING(2048), // 命令参数
     status: {
-      type: Sequelize.ENUM('enable', 'disabled', 'error'),
+      type: Sequelize.ENUM('enabled', 'disabled', 'error'),
       allowNull: false
     },
     reason: Sequelize.STRING(2048),
@@ -37,7 +37,7 @@ const createTable = async() => {
     }],
     hooks: {
       afterCreate: async(task, options) => {
-        if (task.status === 'enable') {
+        if (task.status === 'enabled') {
           await createJob(task);
         }
       },
@@ -45,7 +45,7 @@ const createTable = async() => {
         await cancelJob(task);
       },
       afterUpdate: async(task, options) => {
-        if (task.status === 'enable') {
+        if (task.status === 'enabled') {
           await createJob(task);
         } else {
           await cancelJob(task);
@@ -86,7 +86,7 @@ const runJob = async(task) => {
   logger.debug(i18n.t('计划开始执行'), task.module, task.name);
   // 需要先更新一下，有可能已经取消
   await task.reload();
-  if (task.status !== 'enable') {
+  if (task.status !== 'enabled') {
     cancelJob(task);
     logger.debug(i18n.t('计划取消执行'), task.module, task.name);
     return;
@@ -141,7 +141,7 @@ const refresh = async() => {
     logger.debug(i18n.t('任务开始刷新'));
     const result = await Task.findAndCountAll({
       where: {
-        status: 'enable'
+        status: 'enabled'
       },
       //limit: MAX_READTASKS
     });
@@ -199,10 +199,10 @@ const add = async(name, module, spec, command, data, description) => {
   const type = moment.isDate(spec);
   const exists = await Task.findOne({ where: { name, module } });
   if (exists) {
-    if (exists.status === 'enable') {
+    if (exists.status === 'enabled') {
       throw new Error(i18n.t('任务创建失败，任务已经存在'));
     }
-    exists.status = 'enable';
+    exists.status = 'enabled';
     exists.reason = '';
     exists.type = type ? 'date' : 'cron';
     exists.cron = type ? null : spec;
@@ -223,7 +223,7 @@ const add = async(name, module, spec, command, data, description) => {
       command,
       data: JSON.stringify(data),
       description,
-      status: 'enable'
+      status: 'enabled'
     });
     // 这里不需要，用hook
     //await createJob(task);
