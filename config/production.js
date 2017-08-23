@@ -15,19 +15,19 @@ if (fs.existsSync(configfile)) {
 
 var run = function(cfg) {
   // load app module
-  var instance = new app( Object.assign({
+  var instance = new app(Object.assign({
     appPath: path.join(process.cwd(), 'node_modules'),
     // 模块配置文件
-    modules:   'saas-plat-*',
+    modules: 'saas-plat-*',
     // 模块配置文件
-    logLevel:   'INFO',
-  },cfg));
-  instance.run().catch(function(err){
+    logLevel: 'INFO'
+  }, cfg));
+  instance.run().catch(function(err) {
     console.error(err);
   });
 }
 
-if (args.indexOf('--saasplat')>-1) {
+if (args.indexOf('--saasplat') > -1) {
   // 启用了平台部署模式
   if (config && !config.id) {
     console.warn('config文件无效');

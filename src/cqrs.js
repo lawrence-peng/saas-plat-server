@@ -1,3 +1,4 @@
+import assert from 'assert';
 import * as cqrs from 'cqrs-fx';
 import * as cqrsCore from 'cqrs-fx/lib/core';
 import * as cqrsEvent from 'cqrs-fx/lib/event';
@@ -6,6 +7,7 @@ import * as cqrsBus from 'cqrs-fx/lib/bus';
 import MqWorker from 'cqrs-fx/lib/bus/mq_worker';
 import config from 'cqrs-fx/lib/config';
 import {getDecoratorToken} from 'cqrs-fx/lib/event/decorator';
+import * as platform from './platform';
 import Installs from './util/installs';
 import {cqrsLogger as logger} from './util/log';
 import i18n from './util/i18n';
@@ -18,8 +20,7 @@ const _dirname = {
 let eventWorker;
 
 const init = (cfg) => {
-  // todo： 这里配置以后需要根据启用的角色不同进行不同配置
-  //        比如启用了非应用服务器模式，这里需要配置commandBus未应用服务器的mq
+  // todo： 这里配置以后需要根据启用的角色不同进行不同配置        比如启用了非应用服务器模式，这里需要配置commandBus未应用服务器的mq
   config.init({
     bus: {
       commandBus: 'direct', // 命令采用同步执行
@@ -59,11 +60,20 @@ const init = (cfg) => {
 }
 
 const run = async() => {
-  if (eventWorker || config.get('bus').eventBus !== 'mq') {
-    return;
+  // 消息队列需要worker
+  if (!(eventWorker || config.get('bus').eventBus !== 'mq')) {
+    eventWorker = new MqWorker('event');
+    await eventWorker.run();
   }
-  eventWorker = new MqWorker('event');
-  await eventWorker.run();
+  const eventDispatcher = cqrsBus.getEventDispatcher();
+  eventDispatcher.addListener(null, (evt) => {
+    // 平台事件同步，用于协同合作伙伴业务
+    platform.publish(evt);
+  }, (evt, code, msg) => {
+    // 事件必须执行成功
+    // 这里对失败的事件进行记录，定期重试直到成功
+    logger.error(code, msg, evt);
+  });
 }
 
 const clear = async() => {
@@ -97,7 +107,7 @@ const caluModules = (modules) => {
         name = p
       } = getDecoratorToken(type.prototype[p]);
       if (module && name) {
-        if (calus.indexOf(module) == -1) {
+        if (calus.indexOf(module) === -1) {
           calus.push(module);
         }
       }
@@ -110,7 +120,7 @@ const invoke = (callback, ...args) => {
   if (!callback) {
     return;
   }
-  if (typeof callback == 'function') {
+  if (typeof callback === 'function') {
     try {
       callback(...args);
     } catch (err) {
@@ -130,9 +140,9 @@ const createListener = (total, progressCallback) => {
     if (!code) {
       current++;
       logger.debug(i18n.t('开始回溯事件'), module + '/' + name, id);
-    } else if (code == 'ok') {
+    } else if (code === 'ok') {
       logger.debug(i18n.t('回溯事件完成'), module + '/' + name, id);
-    } else if (code != 'nohandler') {
+    } else if (code !== 'nohandler') {
       logger.error(i18n.t('回溯事件失败'), module + '/' + name, id, code, error || '');
     }
     invoke(progressCallback, {
@@ -149,8 +159,8 @@ const createListener = (total, progressCallback) => {
 // 回溯业务事件，可以指定业务日期
 const resource = async(modules, gteTimestamp, progressCallback) => {
   saasplat.resourcing = true;
-  let total = 0,
-    current = 0;
+  let total = 0;
+  let current = 0;
   logger.debug(i18n.t('开始回溯事件...'));
   try {
     const eventModules = caluModules(modules);
@@ -172,18 +182,18 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
     const listener = createListener(total, progressCallback);
     eventDispatcher.addListener(listener, listener, listener);
     logger.debug(i18n.t('预计回溯事件') + ' ' + total);
-    const spec = {
+    let spec = {
       module: {
         $in: eventModules
       }
     };
     if (gteTimestamp) {
-      sepc['timestamp'] = {
+      spec['timestamp'] = {
         $gte: gteTimestamp
       }
     }
     // 按时间顺序回溯
-    const cursor = await eventStorage.visit(spec, {
+    await eventStorage.visit(spec, {
       timestamp: 1
     }, async(item) => {
       current++;
@@ -232,7 +242,7 @@ const migrate = async(modules, progressCallback) => {
   const migrations = {};
   let total = 0;
   let current = 0;
-  for (module of modules) {
+  for (let module of modules) {
     const last = lastChild(await Installs.find(module, 'install')) || {
       name: module,
       version: '0.0.0',
@@ -296,7 +306,7 @@ export default {
   clear,
   fxData : cqrsCore.fxData,
   alias : cqrsCore.alias,
-  require: cqrsCore._require,
+  require : cqrsCore._require,
   resource,
   migrate,
   revertVersion,

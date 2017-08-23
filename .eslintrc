@@ -7,11 +7,14 @@
       "allowImportExportEverywhere": true
     },
     "rules":{
+      "one-var": "off",
       "semi": "off",
+      "padded-blocks": "off",
       "space-before-function-paren": "off",
-      "padded-blocks": ["error", "never"]
+      "spaced-comment": "off"
     },
     "globals": {
+      "thinkData":{},
       "saasplat":{},
       "think":{},
       "describe":{},
