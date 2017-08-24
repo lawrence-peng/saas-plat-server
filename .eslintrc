@@ -11,11 +11,13 @@
       "semi": "off",
       "padded-blocks": "off",
       "space-before-function-paren": "off",
-      "spaced-comment": "off"
+      "spaced-comment": "off",
+      "operator-linebreak": "off"
     },
     "globals": {
       "thinkData":{},
       "saasplat":{},
+      "TYPE":{},
       "think":{},
       "describe":{},
       "it":{}

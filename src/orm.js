@@ -1,114 +1,14 @@
-import path from 'path';
-import fs from 'fs';
 import Sequelize from 'sequelize';
+import alias from './util/alias';
 import i18n from './util/i18n';
 import { ormLogger as logger } from './util/log';
 import Installs from './util/installs';
 import { cmpVer, lastChild, getClassName } from './util/common';
 
 const _data = {
-  alias: {},
-  export: {},
   defines: {},
   db: null,
   sysdb: null
-};
-
-const getFiles = (file) => {
-  let dirs = [];
-  if (fs.existsSync(file)) {
-    let files = fs.readdirSync(file);
-    for (var fi of files) {
-      if (fs.statSync(path.join(file, fi)).isFile())
-        dirs.push(fi);
-    }
-  }
-  return dirs;
-};
-
-// 定义别名
-const alias = (type, paths) => {
-  if (!type) {
-    return _data.alias;
-  }
-  //regist alias
-  if (!Array.isArray(paths)) {
-    paths = [paths];
-  }
-  paths.forEach(dir => {
-    let files = getFiles(dir);
-    files.forEach(file => {
-      if (file.slice(-3) !== '.js' || file[0] === '_') {
-        return;
-      }
-      let name = file.slice(0, -3).replace(/\\/g, '/'); //replace \\ to / on windows
-      name = type + '/' + name;
-      _data.alias[name] = `${dir}${path.sep}${file}`;
-    });
-  });
-};
-
-let _interopSafeRequire = file => {
-  let obj = require(file);
-  if (obj && obj.__esModule && obj.default) {
-    return obj.default;
-  }
-  return obj;
-};
-
-let _safeRequire = file => {
-  // absolute file path is not exist
-  if (path.isAbsolute(file)) {
-    //no need optimize, only invoked before service start
-    if (!fs.statSync(file).isFile()) {
-      return null;
-    }
-    //when file is exist, require direct
-    return _interopSafeRequire(file);
-  }
-  try {
-    return _interopSafeRequire(file);
-  } catch (err) {
-    logger.error(err);
-  }
-  return null;
-};
-
-let _loadRequire = (name, filepath) => {
-  let obj = _safeRequire(filepath);
-  if (typeof obj === 'function') {
-    obj.prototype.__type = name;
-    obj.prototype.__filename = filepath;
-  }
-  if (obj) {
-    _data.export[name] = obj;
-  }
-  return obj;
-};
-
-// 通过别名加载类型
-const _require = (name, flag) => {
-  if (typeof name !== 'string') {
-    return name;
-  }
-  // adapter or middle by register
-  let Cls = _data.export[name];
-  if (!Cls) {
-    let filepath = _data.alias[name];
-    if (filepath) {
-      return _loadRequire(name, path.normalize(filepath));
-    }
-    // only check in alias
-    if (flag) {
-      return null;
-    }
-    filepath = require.resolve(name);
-    Cls = _loadRequire(name, filepath);
-    if (!Cls) {
-      return null;
-    }
-  }
-  return Cls;
 };
 
 const define = (module, name, schame, options, type = 'model') => {
@@ -142,11 +42,11 @@ const get = (module, name, type = 'model') => {
     return _data.defines[modelAlias];
   }
   try {
-    if (!(modelAlias in _data.alias)) {
+    if (!(modelAlias in alias.alias)) {
       logger.debug(i18n.t('查询对象不存在'), `${module}/${name}`);
       return null;
     }
-    const ModelType = _require(_data.alias[modelAlias]);
+    const ModelType = alias.require(alias.alias[modelAlias]);
     if (!ModelType) {
       logger.warn(i18n.t('查询对象加载失败'), `${module}/${name}`);
       return null;
@@ -155,8 +55,8 @@ const get = (module, name, type = 'model') => {
     if (typeof modelInst.schame !== 'function') {
       logger.warn(i18n.t('查询对象schame未定义'), `${module}/${name}`);
     }
-    _data.defines[modelAlias] = define(module, name, typeof modelInst.schame ===
-      'function' ?
+    _data.defines[modelAlias] = define(module, name,
+      typeof modelInst.schame === 'function' ?
       modelInst.schame() :
       (modelInst.schame || {}), typeof modelInst.options === 'function' ?
       modelInst.options() :
@@ -182,31 +82,31 @@ const createModel = async(Model, force = false) => {
   }
 };
 
-const createModels = async(model, force = false) => {
-  if (model.__esModule) {
-    for (let p in model) {
-      if (model.hasOwnProperty(p)) {
-        await createModel(model[p], force);
-      }
-    }
-  } else {
-    await createModel(model, force);
-  }
-};
+// const createModels = async(model, force = false) => {
+//   if (model.__esModule) {
+//     for (let p in model) {
+//       if (model.hasOwnProperty(p)) {
+//         await createModel(model[p], force);
+//       }
+//     }
+//   } else {
+//     await createModel(model, force);
+//   }
+// };
 
-const create = async(modules, name, force = false) => {
+const create = async(modules, name, force = false, type = 'model') => {
   logger.debug(i18n.t('开始重建数据表...'));
   for (let module of modules) {
     if (name) {
-      await createModel(_require(`${module}/model/${name}`), force);
+      await createModel(alias.require(`${module}/${type}/${name}`), force);
     } else {
-      const models = Object.keys(_data.alias).filter(item => item.indexOf(
-        `${module}/model/`) > -1);
+      const models = Object.keys(alias.alias).filter(item => item.indexOf(
+        `${module}/${type}/`) > -1);
       if (models.length <= 0) {
         logger.warn(i18n.t('未加载任何模型定义'));
       }
       for (const item of models) {
-        await createModel(_require(item), force);
+        await createModel(alias.require(item), force);
       }
     }
   }
@@ -298,14 +198,14 @@ const down = async(Migration) => {
 }
 
 // 升级或者降级
-const migrate = async(modules, revert = false, type='datamigration') => {
+const migrate = async(modules, revert = false, type = 'datamigration') => {
   if (revert) {
     logger.debug(i18n.t(`开始回退迁移数据..`));
   } else {
     logger.debug(i18n.t(`开始迁移数据..`));
   }
   const migrations = [];
-  for (const item of Object.keys(_data.alias)) {
+  for (const item of Object.keys(alias.alias)) {
     const sp = item.split('/');
     const module = sp[0];
     const v = sp[2];
@@ -337,9 +237,9 @@ const migrate = async(modules, revert = false, type='datamigration') => {
   for (const typeAlias of migrations) {
     current++;
     if (revert) {
-      await down(_require(typeAlias));
+      await down(alias.require(typeAlias));
     } else {
-      await up(_require(typeAlias));
+      await up(alias.require(typeAlias));
     }
     logger.debug(i18n.t('已迁移数据') + ' ' + Math.floor(current * 100.0 / total) +
       '%');
@@ -384,17 +284,7 @@ const connect = async(querydb, sysdb) => {
 
 const TYPE = Sequelize; // 类型使用Sequelize
 
-const clearData = () => {
-  _data.export = {};
-  _data.alias = {};
-  _data.defines = {};
-};
-
 export default {
-  alias,
-  clearData,
-  require: _require,
-  data: _data,
   drop,
   get,
   define,

@@ -515,7 +515,7 @@ saasplat.model.get = (name, module) => {
   if (!module) {
     throw new Error(name + i18n.t('查询对象未找到，模块未知'));
   }
-  return orm.get('model', module, name);
+  return orm.get(module, name);
 };
 
 saasplat.bootstrap = class extends saasplat.mixins(saasplat.base) {
@@ -523,7 +523,9 @@ saasplat.bootstrap = class extends saasplat.mixins(saasplat.base) {
 }
 
 // 系统库
-saasplat.system = {};
+saasplat.system = (...args) => {
+  return saasplat.system.get(...args);
+};
 saasplat.system.model = saasplat.model.base;
 saasplat.system.migration = class extends Migration {
   constructor() {
@@ -544,7 +546,7 @@ saasplat.system.get = (name, module) => {
   if (!module) {
     throw new Error(name + i18n.t('系统对象未找到，模块未知'));
   }
-  return orm.get('system', module, name);
+  return orm.get(module, name, 'system');
 };
 
 // ***************** task *****************

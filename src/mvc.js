@@ -23,9 +23,9 @@ const init = ({
       RUNTIME_PATH: appPath + path.sep + 'runtime',
       ROOT_PATH: appPath,
       RESOURCE_PATH: appPath + path.sep + 'www',
-      env: debugMode
-        ? 'development'
-        : 'production'
+      env: debugMode ?
+        'development' :
+        'production'
     });
 
     // 需要加载类型
@@ -42,13 +42,13 @@ const run = () => {
 export default {
   init,
   run,
-  clearData : () => {
+  clearData: () => {
     app.clearData();
   },
-  compile : (...args) => {
+  compile: (...args) => {
     app.compile(...args);
   },
-  preload : () => {
+  preload: () => {
     app.preload();
   }
 };

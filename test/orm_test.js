@@ -6,6 +6,14 @@ import * as utils from './utils/file';
 import {querydb} from './config';
 
 describe('数据', function() {
+  it('系统库 & 查询库', async function() {
+
+  };
+
+  it('迁移系统库', async function() {
+
+  };
+
   it('迁移数据', async function() {
     const db = await orm.connect(querydb);
 

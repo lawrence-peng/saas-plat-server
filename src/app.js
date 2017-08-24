@@ -9,8 +9,8 @@ import orm from './orm';
 import config from './config';
 import boots from './boots';
 import task from './task';
-import privilege from './privilege';
 import dataSrv from './data';
+import alias from './util/alias';
 import { init as logInit, spLogger as logger } from './util/log';
 import i18n from './util/i18n';
 import Installs from './util/installs';
@@ -24,6 +24,7 @@ const ormTypes = ['model', 'datamigration', 'system', 'sysmigration'];
 const cqrsTypes = ['command', 'domain', 'event', 'config', 'migration'];
 const bootTypes = ['bootstrap'];
 const configTypes = ['config'];
+const taskTypes = ['task'];
 
 export default class {
   constructor({
@@ -167,7 +168,7 @@ export default class {
         orm.alias(moduleType, filepath);
       });
     }
-    logger.trace('load ORM type \n', orm.alias());
+    logger.trace('load ORM type \n', orm.filter(ormTypes));
   }
 
   // 加载cqrs
@@ -214,10 +215,10 @@ export default class {
         let name = module;
         let moduleType = name + '/' + itemType;
         let filepath = this._getPath(module, itemType);
-        boots.alias(moduleType, filepath);
+        alias.alias(moduleType, filepath);
       });
     }
-    logger.trace('load bootstrap type \n', boots.alias());
+    logger.trace('load bootstrap type \n', alias.filter(bootTypes));
   }
 
   loadConfig() {
@@ -226,10 +227,22 @@ export default class {
         let name = module;
         let moduleType = name + '/' + itemType;
         let filepath = this._getPath(module, itemType);
-        config.alias(moduleType, filepath);
+        alias.alias(moduleType, filepath);
       });
     }
-    logger.trace('load config type \n', config.alias());
+    logger.trace('load config type \n', alias.filter(configTypes));
+  }
+
+  loadTask() {
+    for (let itemType of taskTypes) {
+      this.modules.forEach(module => {
+        let name = module;
+        let moduleType = name + '/' + itemType;
+        let filepath = this._getPath(module, itemType);
+        alias.alias(moduleType, filepath);
+      });
+    }
+    logger.trace('load task type \n', alias.filter(taskTypes));
   }
 
   compile(options = {}) {
@@ -303,19 +316,9 @@ export default class {
 
   preload() {
     let startTime = Date.now();
-    // for (let name in thinkData.alias) {   think.require(thinkData.alias[name]); }
-    for (let name in orm.data.alias) {
-      orm.require(orm.data.alias[name]);
-    }
-    for (let name in cqrs.fxData.alias) {
-      cqrs.require(cqrs.fxData.alias[name]);
-    }
-    for (let name in config.data.alias) {
-      config.require(config.data.alias[name]);
-    }
-    for (let name in boots.data.alias) {
-      boots.require(boots.data.alias[name]);
-    }
+    mvc.preload();
+    cqrs.preload();
+    alias.preload();
     logger.debug(i18n.t('预加载程序包完成'), 'PRELOAD', startTime);
   }
 
@@ -449,8 +452,7 @@ export default class {
       // 记录
       await Installs.save(modules.map(name => ({
         name,
-        version: this.moduleConfigs[
-          name].version,
+        version: this.moduleConfigs[name].version,
         installDate: new Date(),
         status: 'waitCommit'
       })));
@@ -528,10 +530,6 @@ export default class {
     await task.init({
       ...cfg.task
     });
-    // user privilege
-    await privilege.init({
-      ...cfg.privilege
-    });
     // 重置
     this.moduleConfigs = {};
   }
@@ -542,7 +540,6 @@ export default class {
     this.load();
     this.autoReload();
     if (preload) {
-      mvc.preload();
       this.preload();
     }
     this.captureError();
