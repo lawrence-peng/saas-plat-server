@@ -9,11 +9,9 @@ import orm from './orm';
 import config from './config';
 import boots from './boots';
 import task from './task';
-import userrole from './userrole';
+import privilege from './privilege';
 import dataSrv from './data';
-import platform from './platform';
-import * as sysdb from './util/sysdb';
-import {init as logInit, spLogger as logger} from './util/log';
+import { init as logInit, spLogger as logger } from './util/log';
 import i18n from './util/i18n';
 import Installs from './util/installs';
 import AutoReload from './util/auto_reload';
@@ -22,7 +20,7 @@ import WatchCompile from './util/watch_compile';
 // const _modules = ['controller', 'logic', 'service', 'view', 'model', 'event',
 // 'command', 'domain', 'config'];
 const mvcTypes = ['controller', 'logic', 'service']; // model -> orm config -> config
-const ormTypes = ['model', 'datamigration'];
+const ormTypes = ['model', 'datamigration', 'system', 'sysmigration'];
 const cqrsTypes = ['command', 'domain', 'event', 'config', 'migration'];
 const bootTypes = ['bootstrap'];
 const configTypes = ['config'];
@@ -83,7 +81,7 @@ export default class {
     this.license = license;
     logInit(log);
     logger.setLevel(logLevel || 'INFO');
-    mvc.init({appPath, debug, host, port, route_on});
+    mvc.init({ appPath, debug, host, port, route_on });
     require('./base'); // 需要等thinkjs加载完controller
     saasplat.appPath = this.appPath;
     saasplat.devPath = this.devPath;
@@ -130,10 +128,10 @@ export default class {
       // saasplat.modules = this.modules; saasplat.devModules = this.devModules;
       return;
     }
-    let devModules = this.devPath
-      ? glob.sync(this.devGlob, {cwd: this.devPath})
-      : [];
-    let appModules = glob.sync(this.glob, {cwd: this.appPath}).filter(item => devModules.indexOf(item) < 0); // 重名已开发包为主
+    let devModules = this.devPath ?
+      glob.sync(this.devGlob, { cwd: this.devPath }) : [];
+    let appModules = glob.sync(this.glob, { cwd: this.appPath }).filter(item =>
+      devModules.indexOf(item) < 0); // 重名已开发包为主
     this.devModules = devModules;
     this.modules = appModules.concat(devModules);
     saasplat.modules = this.modules;
@@ -248,10 +246,11 @@ export default class {
     const opt = {
       cwd: this.devPath || this.appPath
     };
-    const devModules = glob.sync(this.devPath
-      ? this.devGlob
-      : this.glob, opt);
-    let instance = new WatchCompile(this.devPath || this.appPath, devModules, options, this.compileCallback);
+    const devModules = glob.sync(this.devPath ?
+      this.devGlob :
+      this.glob, opt);
+    let instance = new WatchCompile(this.devPath || this.appPath, devModules,
+      options, this.compileCallback);
     instance.run();
     // mvc.compile( options );
   }
@@ -275,9 +274,10 @@ export default class {
   }
 
   getReloadInstance() {
-    let instance = new AutoReload(this.devPath || this.appPath, this.modules, () => {
-      this.reload();
-    });
+    let instance = new AutoReload(this.devPath || this.appPath, this.modules,
+      () => {
+        this.reload();
+      });
     return instance;
   }
 
@@ -389,8 +389,15 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(modules.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
+      await Installs.save(modules.map(name => ({
+        name,
+        version: this.moduleConfigs[name].version,
+        installDate: new Date(),
+        status: 'waitCommit'
+      })));
       await Installs.setInstallMode('migrate');
+      // 升级系统库
+      await orm.migrate(modules, false, 'sysmigration');
       // 升级数据
       await orm.migrate(modules);
       // 升级业务
@@ -403,6 +410,7 @@ export default class {
       await cqrs.backMigrate();
       // 降级数据
       await orm.migrate(modules, true);
+      await orm.migrate(modules, true, 'sysmigration');
       await Installs.rollback(modules);
       return false;
     }
@@ -439,7 +447,13 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(modules.map(name => ({name, version: this.moduleConfigs[name].version, installDate: new Date(), status: 'waitCommit'})));
+      await Installs.save(modules.map(name => ({
+        name,
+        version: this.moduleConfigs[
+          name].version,
+        installDate: new Date(),
+        status: 'waitCommit'
+      })));
       await Installs.setInstallMode('resource');
       // 之前可能已经安装过，但是卸载后会保留数据表，需要备份
       await orm.backup(modules);
@@ -499,7 +513,7 @@ export default class {
     //
     await dataSrv.init(this.datadb);
     // this.clearData(); 连接查询库
-    await orm.connect(this.querydb);
+    await orm.connect(this.querydb, this.systemdb);
     // 初始化 cqrs
     cqrs.init({
       debug: this.debugMode,
@@ -510,18 +524,14 @@ export default class {
       snapshotStoreage: this.snapshotStoreage,
       ...cfg.cqrs
     });
-    // sys db
-    await sysdb.connect(this.systemdb);
     // task
     await task.init({
       ...cfg.task
     });
     // user privilege
-    await userrole.init({
-      ...cfg.userrole
+    await privilege.init({
+      ...cfg.privilege
     });
-    // 平台配置服务
-    await platform.connect(this.license);
     // 重置
     this.moduleConfigs = {};
   }

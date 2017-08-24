@@ -2,20 +2,16 @@ import path from 'path';
 import fs from 'fs';
 import Sequelize from 'sequelize';
 import i18n from './util/i18n';
-import {ormLogger as logger} from './util/log';
+import { ormLogger as logger } from './util/log';
 import Installs from './util/installs';
-import {cmpVer, lastChild, getClassName} from './util/common';
+import { cmpVer, lastChild, getClassName } from './util/common';
 
 const _data = {
   alias: {},
   export: {},
   defines: {},
-  db: null
-};
-
-const _dirname = {
-  model: 'model',
-  migration: 'datamigration'
+  db: null,
+  sysdb: null
 };
 
 const getFiles = (file) => {
@@ -25,8 +21,8 @@ const getFiles = (file) => {
     for (var fi of files) {
       if (fs.statSync(path.join(file, fi)).isFile())
         dirs.push(fi);
-      }
     }
+  }
   return dirs;
 };
 
@@ -92,7 +88,7 @@ let _loadRequire = (name, filepath) => {
 
 // 通过别名加载类型
 const _require = (name, flag) => {
-  if (typeof name != 'string') {
+  if (typeof name !== 'string') {
     return name;
   }
   // adapter or middle by register
@@ -115,10 +111,10 @@ const _require = (name, flag) => {
   return Cls;
 };
 
-const define = (module, name, schame, options) => {
+const define = (module, name, schame, options, type = 'model') => {
   if (!module) {
     const mn = name.split('/');
-    if (mn.length == 2) {
+    if (mn.length === 2) {
       module = mn[0];
       name = mn[1];
     }
@@ -126,21 +122,22 @@ const define = (module, name, schame, options) => {
   if (!module) {
     throw new Error(i18n.t('查询对象无效，模块未指定'));
   }
-  const Model = _data.db.define(module + '_' + name, schame, {
+  const db = type === 'model' ? _data.db : _data.sysdb;
+  const Model = db.define(module + '_' + name, schame, {
     ...options,
     tableName: module + '_' + name
   });
   return Model;
 };
 
-const get = (module, name) => {
+const get = (module, name, type = 'model') => {
   if (!name) {
     throw new Error(i18n.t('查询对象未找到'));
   }
   if (!module) {
     throw new Error(i18n.t('查询对象未找到，模块未知'));
   }
-  const modelAlias = `${module}/model/${name}`;
+  const modelAlias = `${module}/${type}/${name}`;
   if (modelAlias in _data.defines) {
     return _data.defines[modelAlias];
   }
@@ -149,20 +146,21 @@ const get = (module, name) => {
       logger.debug(i18n.t('查询对象不存在'), `${module}/${name}`);
       return null;
     }
-    const modelType = _require(_data.alias[modelAlias]);
-    if (!modelType) {
+    const ModelType = _require(_data.alias[modelAlias]);
+    if (!ModelType) {
       logger.warn(i18n.t('查询对象加载失败'), `${module}/${name}`);
       return null;
     }
-    const modelInst = new modelType;
-    if (typeof modelInst.schame != 'function') {
+    const modelInst = new ModelType();
+    if (typeof modelInst.schame !== 'function') {
       logger.warn(i18n.t('查询对象schame未定义'), `${module}/${name}`);
     }
-    _data.defines[modelAlias] = define(module, name, typeof modelInst.schame == 'function'
-      ? modelInst.schame()
-      : (modelInst.schame || {}), typeof modelInst.options == 'function'
-      ? modelInst.options()
-      : (modelInst.options || {}));
+    _data.defines[modelAlias] = define(module, name, typeof modelInst.schame ===
+      'function' ?
+      modelInst.schame() :
+      (modelInst.schame || {}), typeof modelInst.options === 'function' ?
+      modelInst.options() :
+      (modelInst.options || {}));
     return _data.defines[modelAlias];
   } catch (e) {
     logger.warn(e);
@@ -171,15 +169,14 @@ const get = (module, name) => {
 }
 
 const createModel = async(Model, force = false) => {
-  const modelInst = new Model;
-  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split('/')[2], typeof modelInst.schame == 'function'
-    ? modelInst.schame()
-    : {}, typeof modelInst.options == 'function'
-    ? modelInst.options()
-    : {});
+  const modelInst = new Model();
+  const model = define(modelInst.__type.split('/')[0], modelInst.__type.split(
+      '/')[2], typeof modelInst.schame === 'function' ?
+    modelInst.schame() : {}, typeof modelInst.options === 'function' ?
+    modelInst.options() : {});
   if (model) {
     // force = drop and create
-    await model.sync({force});
+    await model.sync({ force });
     // todo 执行升级脚本
     logger.debug(i18n.t('表已创建'), model.name);
   }
@@ -203,7 +200,8 @@ const create = async(modules, name, force = false) => {
     if (name) {
       await createModel(_require(`${module}/model/${name}`), force);
     } else {
-      const models = Object.keys(_data.alias).filter(item => item.indexOf(`${module}/model/`) > -1);
+      const models = Object.keys(_data.alias).filter(item => item.indexOf(
+        `${module}/model/`) > -1);
       if (models.length <= 0) {
         logger.warn(i18n.t('未加载任何模型定义'));
       }
@@ -215,9 +213,10 @@ const create = async(modules, name, force = false) => {
   logger.debug(i18n.t('重建数据表完成'));
 };
 
-const drop = async(modules) => {
+const drop = async(modules, type = 'model') => {
   logger.debug(i18n.t('开始销毁数据表...'));
-  const queryInterface = _data.db.getQueryInterface();
+  const db = type === 'model' ? _data.db : _data.sysdb;
+  const queryInterface = db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   for (let name of tableNames) {
     if (!modules || modules.indexOf(name.split('_')[0]) > -1) {
@@ -227,10 +226,12 @@ const drop = async(modules) => {
   logger.debug(i18n.t(`销毁数据表完成`));
 }
 
-const backup = async(modules) => {
+const backup = async(modules, type = 'model') => {
   logger.debug(i18n.t(`开始备份数据表...`));
-  const queryInterface = _data.db.getQueryInterface();
-  const tableNames = await queryInterface.showAllTables().filter(name => modules.indexOf(name.split('_')[0]) > -1);
+  const db = type === 'model' ? _data.db : _data.sysdb;
+  const queryInterface = db.getQueryInterface();
+  const tableNames = await queryInterface.showAllTables().filter(name =>
+    modules.indexOf(name.split('_')[0]) > -1);
   if (tableNames.length <= 0) {
     logger.debug(i18n.t(`无数据表需要备份`));
   }
@@ -245,8 +246,9 @@ const backup = async(modules) => {
   logger.debug(i18n.t(`备份数据表完成`));
 }
 
-const removeBackup = async(modules) => {
-  const queryInterface = _data.db.getQueryInterface();
+const removeBackup = async(modules, type = 'model') => {
+  const db = type === 'model' ? _data.db : _data.sysdb;
+  const queryInterface = db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   for (const name of tableNames) {
     if (!modules || (name.split('_')[0] in modules)) {
@@ -258,9 +260,10 @@ const removeBackup = async(modules) => {
   }
 }
 
-const restore = async(modules, force = false) => {
+const restore = async(modules, force = false, type = 'model') => {
   logger.debug(i18n.t(`开始恢复备份数据表..`));
-  const queryInterface = _data.db.getQueryInterface();
+  const db = type === 'model' ? _data.db : _data.sysdb;
+  const queryInterface = db.getQueryInterface();
   const tableNames = await queryInterface.showAllTables();
   for (let name of tableNames) {
     if (!modules || modules.indexOf(name.split('_')[0]) > -1) {
@@ -295,7 +298,7 @@ const down = async(Migration) => {
 }
 
 // 升级或者降级
-const migrate = async(modules, revert = false) => {
+const migrate = async(modules, revert = false, type='datamigration') => {
   if (revert) {
     logger.debug(i18n.t(`开始回退迁移数据..`));
   } else {
@@ -309,7 +312,7 @@ const migrate = async(modules, revert = false) => {
     if (modules.indexOf(module) < 0) {
       continue;
     }
-    if (sp[1] != 'datamigration') {
+    if (sp[1] !== type) {
       continue;
     }
     const last = lastChild(await Installs.find(module, 'install')) || {
@@ -338,20 +341,21 @@ const migrate = async(modules, revert = false) => {
     } else {
       await up(_require(typeAlias));
     }
-    logger.debug(i18n.t('已迁移数据') + ' ' + Math.floor(current * 100.0 / total) + '%');
+    logger.debug(i18n.t('已迁移数据') + ' ' + Math.floor(current * 100.0 / total) +
+      '%');
   }
   logger.debug(i18n.t(`迁移数据完成`));
 }
 
-const connect = async(querydb) => {
+const connect = async(querydb, sysdb) => {
   if (_data.db) {
     return _data.db;
   }
   const {
     database = 'saasplat_querys',
-    username = 'root',
-    password = '',
-    ...options
+      username = 'root',
+      password = '',
+      ...options
   } = querydb;
   _data.db = new Sequelize(database, username, password, {
     ...options,
@@ -361,8 +365,23 @@ const connect = async(querydb) => {
   });
   // 检查是否能连接
   await _data.db.authenticate();
-  return _data.db;
+
+  const {
+    databaseSys = 'saasplat_system',
+      usernameSys = 'root',
+      passwordSys = '',
+      ...optionsSys
+  } = sysdb;
+  _data.sysdb = new Sequelize(databaseSys, usernameSys, passwordSys, {
+    ...optionsSys,
+    logging: (...args) => {
+      logger.debug(...args);
+    }
+  });
+  // 检查是否能连接
+  await _data.sysdb.authenticate();
 };
+
 const TYPE = Sequelize; // 类型使用Sequelize
 
 const clearData = () => {
@@ -374,8 +393,8 @@ const clearData = () => {
 export default {
   alias,
   clearData,
-  require : _require,
-  data : _data,
+  require: _require,
+  data: _data,
   drop,
   get,
   define,
