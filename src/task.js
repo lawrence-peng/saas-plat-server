@@ -1,7 +1,6 @@
 import schedule from 'node-schedule';
 import moment from 'moment';
 import i18n from './util/i18n';
-import cqrs from './cqrs';
 import alias from './util/alias';
 import { taskLogger as logger } from './util/log';
 
@@ -32,12 +31,20 @@ const runJob = (task) => {
     jobs.delete(task.id);
   }
   try {
-    // 计划任务到期就执行一个命令
-    cqrs.bus.publishCommand({
-      module: task.module,
-      name: task.command,
-      data: task.data
-    });
+    if (typeof task.handler === 'string') {
+      // 计划任务到期就执行一个命令
+      require('./cqrs').bus.publishCommand({
+        module: task.module,
+        name: task.command,
+        data: task.data
+      });
+    } else if (typeof task.handler === 'function') {
+      task.handler(task.data);
+    } else {
+      task.status = 'error';
+      task.reason = i18n.t('任务无法执行');
+      task.save();
+    }
   } catch (err) {
     logger.debug(i18n.t('计划执行失败'), err);
     task.status = 'error';
@@ -129,11 +136,14 @@ const stop = () => {
 }
 
 const add = (name, module, spec, command, data, description) => {
+  if (typeof command !== 'function' && typeof command !== 'string') {
+    throw new Error(500, i18n.t('任务创建失败，任务command无效'));
+  }
   const type = moment.isDate(spec);
   const exists = tasks.find(it => it.name === name && it.module === module);
   if (exists) {
     if (exists.status === 'enabled') {
-      throw new Error(i18n.t('任务创建失败，任务已经存在'));
+      throw new Error(500, i18n.t('任务创建失败，任务已经存在'));
     }
     exists.status = 'enabled';
     exists.reason = '';

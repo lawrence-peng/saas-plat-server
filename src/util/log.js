@@ -24,9 +24,9 @@ const defaultConfig = {
       type: 'console',
       layout: {
         type: 'pattern',
-        pattern: '\x1B[90m[%d]\x1B[39m \x1B[36m[USERROLE]\x1B[39m %[%m%]'
+        pattern: '\x1B[90m[%d]\x1B[39m \x1B[36m[Task]\x1B[39m %[%m%]'
       },
-      category: 'USERROLE'
+      category: 'Task'
     }, {
       type: 'console',
       layout: {
@@ -72,4 +72,3 @@ export const cqrsLogger = log4js.getLogger('CQRS');
 export const ormLogger = log4js.getLogger('Sequelize');
 export const sysdbLogger = log4js.getLogger('Sequelize');
 export const taskLogger = log4js.getLogger('Task');
-export const userroleLogger = log4js.getLogger('USERROLE');
