@@ -96,6 +96,9 @@ const createModel = async(Model, force = false) => {
 
 const create = async(modules, name, force = false, type = 'model') => {
   logger.debug(i18n.t('开始重建数据表...'));
+  if (!Array.isArray(modules)) {
+    modules = [modules];
+  }
   for (let module of modules) {
     if (name) {
       await createModel(alias.require(`${module}/${type}/${name}`), force);
@@ -204,6 +207,7 @@ const migrate = async(modules, revert = false, type = 'datamigration') => {
   } else {
     logger.debug(i18n.t(`开始迁移数据..`));
   }
+  module = Array.isAarry(modules) ? modules : [modules];
   const migrations = [];
   for (const item of Object.keys(alias.alias)) {
     const sp = item.split('/');
@@ -248,38 +252,39 @@ const migrate = async(modules, revert = false, type = 'datamigration') => {
 }
 
 const connect = async(querydb, sysdb) => {
-  if (_data.db) {
-    return _data.db;
+  if (querydb && !_data.db) {
+    const {
+      database = 'saasplat_querys',
+        username = 'root',
+        password = '',
+        ...options
+    } = querydb;
+    _data.db = new Sequelize(database, username, password, {
+      ...options,
+      logging: (...args) => {
+        logger.debug(...args);
+      }
+    });
+    // 检查是否能连接
+    await _data.db.authenticate();
   }
-  const {
-    database = 'saasplat_querys',
-      username = 'root',
-      password = '',
-      ...options
-  } = querydb;
-  _data.db = new Sequelize(database, username, password, {
-    ...options,
-    logging: (...args) => {
-      logger.debug(...args);
-    }
-  });
-  // 检查是否能连接
-  await _data.db.authenticate();
 
-  const {
-    databaseSys = 'saasplat_system',
-      usernameSys = 'root',
-      passwordSys = '',
-      ...optionsSys
-  } = sysdb;
-  _data.sysdb = new Sequelize(databaseSys, usernameSys, passwordSys, {
-    ...optionsSys,
-    logging: (...args) => {
-      logger.debug(...args);
-    }
-  });
-  // 检查是否能连接
-  await _data.sysdb.authenticate();
+  if (sysdb && !_data.sysdb) {
+    const {
+      databaseSys = 'saasplat_system',
+        usernameSys = 'root',
+        passwordSys = '',
+        ...optionsSys
+    } = sysdb;
+    _data.sysdb = new Sequelize(databaseSys, usernameSys, passwordSys, {
+      ...optionsSys,
+      logging: (...args) => {
+        logger.debug(...args);
+      }
+    });
+    // 检查是否能连接
+    await _data.sysdb.authenticate();
+  }
 };
 
 const TYPE = Sequelize; // 类型使用Sequelize
@@ -287,7 +292,8 @@ const TYPE = Sequelize; // 类型使用Sequelize
 export default {
   drop,
   get,
-  define,
+  // define,
+  data: _data,
   create,
   backup,
   removeBackup,

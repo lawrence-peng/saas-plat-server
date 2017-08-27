@@ -110,10 +110,11 @@ const clearData = () => {
   _data.alias = {};
 }
 
-const filter = (types) => {
+const filter = (types, module) => {
   const obj = {};
   for (let name in alias) {
-    if (types.indexOf(name.split('/')[1]) > -1) {
+    const sp = name.split('/');
+    if (types.indexOf(sp[1]) > -1 && (!module || module === sp[1])) {
       obj[name] = alias[name];
     }
   }
