@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import { spLogger as logger } from './log';
+import {spLogger as logger} from './log';
 
 const _data = {
   alias: {},
@@ -47,10 +47,6 @@ let _interopSafeRequire = (name, file) => {
   if (obj && obj.__esModule && obj.default) {
     return obj.default;
   }
-  if (typeof obj === 'function') {
-    obj.prototype.__type = name;
-    obj.prototype.__filename = file;
-  }
   return obj;
 };
 
@@ -74,6 +70,10 @@ let _safeRequire = (name, file) => {
 
 let _loadRequire = (name, filepath) => {
   let obj = _safeRequire(name, filepath);
+  if (typeof obj === 'function') {
+    obj.prototype.__type = name;
+    obj.prototype.__filename = filepath;
+  }
   if (obj) {
     _data.export[name] = obj;
   }
@@ -110,11 +110,18 @@ const clearData = () => {
   _data.alias = {};
 }
 
-const filter = (types, module) => {
+const filter = (types, modules) => {
   const obj = {};
+  if (!Array.isArray(modules)) {
+    modules = [modules];
+  }
+  if (!Array.isArray(types)) {
+    types = [types];
+  }
   for (let name in alias) {
     const sp = name.split('/');
-    if (types.indexOf(sp[1]) > -1 && (!module || module === sp[1])) {
+    if ((types.length === 0 || types.indexOf(sp[1]) > -1) &&
+      (module.length === 0 || modules.indexOf(sp[1]) > -1)) {
       obj[name] = alias[name];
     }
   }
@@ -132,6 +139,6 @@ export default {
   clearData,
   filter,
   preload,
-  require: _require,
-  data: _data
+  require : _require,
+  data : _data
 };

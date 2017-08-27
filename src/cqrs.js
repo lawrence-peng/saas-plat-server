@@ -6,11 +6,11 @@ import * as cqrsSnapshot from 'cqrs-fx/lib/snapshot';
 import * as cqrsBus from 'cqrs-fx/lib/bus';
 import MqWorker from 'cqrs-fx/lib/bus/mq_worker';
 import config from 'cqrs-fx/lib/config';
-import { getDecoratorToken } from 'cqrs-fx/lib/event/decorator';
-import Installs from './util/installs';
-import { cqrsLogger as logger } from './util/log';
+import {getDecoratorToken} from 'cqrs-fx/lib/event/decorator';
+import state from './util/state';
+import {cqrsLogger as logger} from './util/log';
 import i18n from './util/i18n';
-import { cmpVer, lastChild, getClassName } from './util/common';
+import {cmpVer, lastChild, getClassName} from './util/common';
 
 const _dirname = {
   migration: 'migration'
@@ -80,9 +80,7 @@ const clear = async() => {
 // A <- B <- C <- D 重溯B时需要连带C的事件，所以这里需要计算modules的所有依赖模块
 const caluModules = (modules) => {
   const calus = [...modules];
-  Object.keys(cqrsCore.fxData.alias).filter(item => item.indexOf(`/event/`) >
-    -1 && modules.indexOf(item.split('/')[0]) > -1).map(alias => cqrsCore._require(
-    alias)).forEach((type) => {
+  Object.keys(cqrsCore.fxData.alias).filter(item => item.indexOf(`/event/`) > -1 && modules.indexOf(item.split('/')[0]) > -1).map(alias => cqrsCore._require(alias)).forEach((type) => {
     let ctoken = getDecoratorToken(type);
     if (!ctoken.name && !ctoken.module) {
       if (!type.prototype) {
@@ -102,7 +100,7 @@ const caluModules = (modules) => {
       }
       let {
         module = ctoken.module,
-          name = p
+        name = p
       } = getDecoratorToken(type.prototype[p]);
       if (module && name) {
         if (calus.indexOf(module) === -1) {
@@ -141,8 +139,7 @@ const createListener = (total, progressCallback) => {
     } else if (code === 'ok') {
       logger.debug(i18n.t('回溯事件完成'), module + '/' + name, id);
     } else if (code !== 'nohandler') {
-      logger.error(i18n.t('回溯事件失败'), module + '/' + name, id, code, error ||
-        '');
+      logger.error(i18n.t('回溯事件失败'), module + '/' + name, id, code, error || '');
     }
     invoke(progressCallback, {
       module,
@@ -167,8 +164,7 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
       __proto__: cqrsBus.getEventDispatcher(),
       getHandlers: (name, module) => {
         // 过滤出需要回溯的模块handler
-        return (cqrsBus.getEventDispatcher().getHandlers(name, module) ||
-          []).filter(handler => {
+        return (cqrsBus.getEventDispatcher().getHandlers(name, module) || []).filter(handler => {
           return modules.indexOf(handler.CLS.prototype.__module) > -1;
         });
       }
@@ -198,21 +194,20 @@ const resource = async(modules, gteTimestamp, progressCallback) => {
     }, async(item) => {
       current++;
       if (!await eventDispatcher.dispatch({
-          type: 'event',
-          id: item.id,
-          data: item.data,
-          name: item.name,
-          module: item.module,
-          sourceId: item.source_id,
-          sourceAlias: item.source_type,
-          branch: item.branch,
-          version: item.version,
-          timestamp: item.timestamp
-        })) {
+        type: 'event',
+        id: item.id,
+        data: item.data,
+        name: item.name,
+        module: item.module,
+        sourceId: item.source_id,
+        sourceAlias: item.source_type,
+        branch: item.branch,
+        version: item.version,
+        timestamp: item.timestamp
+      })) {
         throw new Error(i18n.t('回溯事件部分失败'));
       }
-      logger.debug(i18n.t('已回溯事件') + ' ' + Math.floor(current * 100.0 /
-        total) + '%');
+      logger.debug(i18n.t('已回溯事件') + ' ' + Math.floor(current * 100.0 / total) + '%');
     });
   } finally {
     delete saasplat.resourcing;
@@ -231,10 +226,10 @@ const up = async(Migration) => {
 
 const revertVersion = async() => {
   const eventStorage = cqrsEvent.getStorage().eventStorage;
-  const lastEvent = await eventStorage.first({}, { timestamp: 1 });
-  await Installs.setRevertVersion(lastEvent ?
-    lastEvent.timestamp :
-    new Date());
+  const lastEvent = await eventStorage.first({}, {timestamp: 1});
+  await state.setRevertVersion(lastEvent
+    ? lastEvent.timestamp
+    : new Date());
 }
 
 const migrate = async(modules, progressCallback) => {
@@ -244,19 +239,17 @@ const migrate = async(modules, progressCallback) => {
   let total = 0;
   let current = 0;
   for (let module of modules) {
-    const last = lastChild(await Installs.find(module, 'install')) || {
+    const last = lastChild(await state.find(module, 'install')) || {
       name: module,
       version: '0.0.0',
       status: 'install'
     };
-    const current = lastChild(await Installs.find(module, 'waitCommit'));
+    const current = lastChild(await state.find(module, 'waitCommit'));
     if (current) {
-      migrations[module] = Object.keys(cqrsCore.fxData.alias).filter(item =>
-        item.indexOf(`${module}/${_dirname.migration}/`) > -1).filter(item => {
+      migrations[module] = Object.keys(cqrsCore.fxData.alias).filter(item => item.indexOf(`${module}/${_dirname.migration}/`) > -1).filter(item => {
         const sp = item.split('/');
         // 大于已安装版本， 并且小于等于当前程序版本
-        return cmpVer(sp[2], last.version) > 0 && cmpVer(sp[2], current.version) <=
-          0;
+        return cmpVer(sp[2], last.version) > 0 && cmpVer(sp[2], current.version) <= 0;
       }).sort((a, b) => {
         const v1 = a.split('/')[2];
         const v2 = b.split('/')[2];
@@ -268,22 +261,21 @@ const migrate = async(modules, progressCallback) => {
     }
   }
   logger.debug(i18n.t('预计迁移命令') + ' ' + total);
-  invoke(progressCallback, { total, current });
+  invoke(progressCallback, {total, current});
   for (const module of modules) {
     const ups = migrations[module];
     for (var i of ups) {
       current++;
       await up(cqrsCore._require(i));
-      invoke(progressCallback, { total, current });
-      logger.debug(i18n.t('已执行迁移') + ' ' + Math.floor(current * 100.0 / total) +
-        '%');
+      invoke(progressCallback, {total, current});
+      logger.debug(i18n.t('已执行迁移') + ' ' + Math.floor(current * 100.0 / total) + '%');
     }
   }
   logger.debug(i18n.t('迁移完成'));
 }
 
 const backMigrate = async() => {
-  const revertVersion = await Installs.getRevertVersion();
+  const revertVersion = await state.getRevertVersion();
   if (!revertVersion) {
     return false;
   }
@@ -292,8 +284,8 @@ const backMigrate = async() => {
     version: {
       $gt: revertVersion
     }
-  }, { force: true });
-  await Installs.setRevertVersion(null);
+  }, {force: true});
+  await state.setRevertVersion(null);
   return true;
 }
 
@@ -315,7 +307,7 @@ export default {
   clearData,
   clear,
   preload,
-  alias: cqrsCore.alias,
+  alias : cqrsCore.alias,
   resource,
   migrate,
   revertVersion,

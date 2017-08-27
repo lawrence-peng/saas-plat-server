@@ -1,9 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import assert from 'assert';
-import {
-  cmpVer
-} from './common';
+import {cmpVer} from './common';
 import i18n from './i18n';
 import {spLogger as logger} from './log';
 
@@ -11,7 +9,7 @@ const OPTIONS = 'options.json';
 const INSTALLS = 'installs.json';
 
 function getDb() {
-  return saasplat.systemdb || path.join(saasplat.appPath, '.saasplat');
+  return path.join(saasplat.appPath, '.saasplat');
 }
 
 function toArray(obj) {
@@ -42,13 +40,15 @@ function readFileJson(filename, valueFormater = toObject) {
 
 function saveJsonFile(filename, json) {
   let file = path.normalize(getDb() + path.sep + filename);
-  let ps = path.dirname(file).split(path.sep);
-  let p = '';
-  for (let dir of ps) {
-    p = path.join(p, dir);
-    if (!fs.existsSync(p)) {
-      logger.trace(i18n.t('开始创建目录') + p);
-      fs.mkdirSync(p);
+  let fp = path.dirname(file);
+  if (!fs.existsSync(fp)) {
+    let ps = fp.split(path.sep);
+    for (let i = 1; i <= ps.length; i++) {
+      let p = path.join(...ps.slice(0, i));
+      if (!fs.existsSync(p)) {
+        logger.trace(i18n.t('开始创建目录') + p);
+        fs.mkdirSync(p);
+      }
     }
   }
   logger.trace(i18n.t('开始写入文件') + file);
@@ -58,43 +58,41 @@ function saveJsonFile(filename, json) {
 let _items;
 
 export default {
-  find: (name, status, version) => {
+  find : (name, status, version) => {
     assert(name);
     if (!_items) {
       _items = readFileJson(INSTALLS, toArray);
     }
-    return _items.filter(item => item.name == name &&
-      (status == undefined || item.status == status) &&
-      (version == undefined || item.version == version)).sort((a, b) => {
+    return _items.filter(item => item.name === name && (status === undefined || item.status === status) && (version === undefined || item.version === version)).sort((a, b) => {
       return cmpVer(a.version, b.version);
     });
   },
 
-  has: (status) => {
+  has : (status) => {
     if (!_items) {
       _items = readFileJson(INSTALLS, toArray);
     }
-    return !!_items.find(item => item.status == status);
+    return !!_items.find(item => item.status === status);
   },
 
-  commit: () => {
+  commit : () => {
     if (!_items) {
       _items = readFileJson(INSTALLS, toArray);
     }
     _items.forEach(item => {
-      if (item.status == 'waitCommit') {
+      if (item.status === 'waitCommit') {
         item.status = 'install';
       }
     });
     saveJsonFile(INSTALLS, _items);
   },
 
-  rollback: (modules) => {
+  rollback : (modules) => {
     if (!_items) {
       _items = readFileJson(INSTALLS, toArray);
     }
-    _items.filter(item => item.status == 'waitCommit' && modules.indexOf(item.name) > -1).forEach(item => {
-      const exists = _items.find(it => it.name == item.name && it.version == item.version);
+    _items.filter(item => item.status === 'waitCommit' && modules.indexOf(item.name) > -1).forEach(item => {
+      const exists = _items.find(it => it.name === item.name && it.version === item.version);
       if (exists) {
         _items.splice(_items.indexOf(exists), 1);
       }
@@ -102,40 +100,40 @@ export default {
     saveJsonFile(INSTALLS, _items);
   },
 
-  getInstallMode: () => {
+  getInstallMode : () => {
     return readFileJson(OPTIONS, toObject).installMode;
   },
 
-  setInstallMode: (installMode) => {
+  setInstallMode : (installMode) => {
     let options = readFileJson(OPTIONS, toObject);
     options.installMode = installMode;
     saveJsonFile(OPTIONS, options);
   },
 
-  setRevertVersion: (revertVersion) => {
+  setRevertVersion : (revertVersion) => {
     let options = readFileJson(OPTIONS, toObject);
     options.revertVersion = revertVersion;
     saveJsonFile(OPTIONS, options);
   },
 
-  getRevertVersion: () => {
+  getRevertVersion : () => {
     return readFileJson(OPTIONS, toObject).revertVersion;
   },
 
-  save: (items) => {
+  save : (items) => {
     if (!_items) {
       _items = readFileJson(INSTALLS, toArray);
     }
-    items.filter(item => item.status == 'uninstall').forEach(item => {
-      const exists = _items.find(it => it.name == item.name && it.version == item.version);
+    items.filter(item => item.status === 'uninstall').forEach(item => {
+      const exists = _items.find(it => it.name === item.name && it.version === item.version);
       if (exists) {
         _items.splice(_items.indexOf(exists), 1);
       }
     });
-    items.filter(item => item.status != 'uninstall').forEach(item => {
-      const exists = _items.find(it => it.name == item.name && it.version == item.version);
+    items.filter(item => item.status !== 'uninstall').forEach(item => {
+      const exists = _items.find(it => it.name === item.name && it.version === item.version);
       if (exists) {
-        if (exists.status != item.status && exists.status == 'install') {
+        if (exists.status !== item.status && exists.status === 'install') {
           throw new Error(exists.name + ' v' + exists.version + i18n.t('已经安装'));
         }
         exists.status = item.status;

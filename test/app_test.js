@@ -5,6 +5,7 @@ import path from 'path';
 import App from '../src/app';
 import * as utils from './utils/file';
 import {
+  systemdb,
   querydb,
   eventdb,
   eventmq
@@ -40,6 +41,7 @@ describe('应用', function () {
       appPath: path.normalize(path.join(__dirname, 'data/' + id)),
       modules: ['module1'],
       querydb,
+      systemdb,
       eventmq,
       eventdb,
       debug: true,
@@ -118,6 +120,7 @@ describe('应用', function () {
         'module1', 'module2'
       ],
       querydb,
+      systemdb,
       eventmq,
       eventdb,
       debug: true,

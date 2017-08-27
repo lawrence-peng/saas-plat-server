@@ -2,25 +2,31 @@
   数据存储服务
 */
 
-import { MongoClient } from 'mongodb';
+import {MongoClient} from 'mongodb';
 
 const COLLECTION = 'data';
 let options;
 let hasChecked = false;
 
 const init = (cfg) => {
-  options = { url: 'mongodb://localhost:27017/saas-plat-server', ...cfg };
+  options = {
+    url: 'mongodb://localhost:27017/saas-plat-server',
+    ...cfg
+  };
 }
 
 const connect = async() => {
-  const { url, ...other } = options;
+  const {
+    url,
+    ...other
+  } = options;
   const db = await MongoClient.connect(url, other);
   if (!hasChecked) {
     const collections = await db.collections();
-    if (collections.indexOf(COLLECTION) == -1) {
+    if (collections.indexOf(COLLECTION) === -1) {
       const collection = await db.createCollection(COLLECTION);
       // 按照单据编号和日期排序
-      collection.createIndex({ id: 1, datetime: 1 });
+      collection.createIndex({id: 1, datetime: 1});
     }
     hasChecked = true;
   }
@@ -78,11 +84,13 @@ const update = async(spec, data) => {
   }
 }
 
-const first = async(spec, sort = { datetime: 1 }) => {
+const first = async(spec, sort = {
+  datetime: 1
+}) => {
   const db = await connect();
   try {
     const ret = await db.collection(COLLECTION).find(_getQuery(spec)).sort(sort).toArray();
-    if (!ret || ret.length<=0) {
+    if (!ret || ret.length <= 0) {
       return null;
     }
     const {
@@ -98,12 +106,13 @@ const first = async(spec, sort = { datetime: 1 }) => {
   }
 }
 
-const find = async(spec, sort = { datetime: 1 }) => {
+const find = async(spec, sort = {
+  datetime: 1
+}) => {
   const db = await connect();
   try {
     // 由小到大排序
-    return (await db.collection(COLLECTION).find(_getQuery(spec)).sort(
-      sort).toArray()).map(({
+    return (await db.collection(COLLECTION).find(_getQuery(spec)).sort(sort).toArray()).map(({
       _id,
       ...other
     }) => ({
@@ -118,8 +127,7 @@ const find = async(spec, sort = { datetime: 1 }) => {
 const deleteOne = async(spec, options) => {
   const db = await connect();
   try {
-    await db.collection(COLLECTION).deleteMany(_getQuery(spec),
-      options);
+    await db.collection(COLLECTION).deleteMany(_getQuery(spec), options);
   } finally {
     db.close();
   }
@@ -138,7 +146,7 @@ export default {
   init,
   connect,
   insert,
-  delete:deleteOne,
+  delete : deleteOne,
   find,
   first,
   update,

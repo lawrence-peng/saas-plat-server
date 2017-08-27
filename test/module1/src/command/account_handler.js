@@ -9,7 +9,7 @@ export default class extends saasplat.commandhandler {
 
   async deleteAccount({userName}) {
     await this.repository.use(async() => {
-      const userAccount = await this.getRepository('user').get(id);
+      const userAccount = await this.getRepository('user').get(userName);
       userAccount.delete();
       await this.repository.save(userAccount);
       await this.repository.commit();

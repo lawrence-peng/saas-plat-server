@@ -15,6 +15,7 @@
       "operator-linebreak": "off"
     },
     "globals": {
+      "thinkjs":{},
       "thinkData":{},
       "saasplat":{},
       "TYPE":{},

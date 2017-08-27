@@ -49,7 +49,6 @@ const runJob = (task) => {
     logger.debug(i18n.t('计划执行失败'), err);
     task.status = 'error';
     task.reason = err.message;
-    task.save();
   }
 }
 

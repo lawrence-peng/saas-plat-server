@@ -1,12 +1,11 @@
 import {expect} from 'chai';
 import path from 'path';
 import cqrs from '../src/cqrs';
-import orm from '../src/orm';
 import config from 'cqrs-fx/lib/config';
-import {getStorage} from 'cqrs-fx/lib/event';
+import * as cqrsCore from 'cqrs-fx/lib/core';
 import '../src/base';
 import * as utils from './utils/file';
-import Installs from '../src/util/installs';
+import state from '../src/util/state';
 
 describe('业务', function() {
   it('可以回溯事件', async function() {
@@ -22,12 +21,10 @@ describe('业务', function() {
 
     saasplat.appPath = path.normalize(__dirname + '/data/' + id);
 
-    cqrs.fxData.alias = {};
-    cqrs.fxData.export = {};
-    cqrs.fxData.container = {};
+    cqrs.clearData();
 
-    cqrs.fxData.alias['module1/command/account_handler'] = path.normalize(__dirname + '/data/' + id + '/module1/src/command/account_handler.js');
-    cqrs.fxData.alias['module1/event/account_handler'] = () => {
+    cqrsCore.fxData.alias['module1/command/account_handler'] = path.normalize(__dirname + '/data/' + id + '/module1/src/command/account_handler.js');
+    cqrsCore.fxData.alias['module1/event/account_handler'] = () => {
       const Class = class my_handler {
         @cqrs.event('module1')
         accountCreated({userName}) {
@@ -42,7 +39,7 @@ describe('业务', function() {
       Class.prototype.__module = 'module1';
       return Class;
     };
-    cqrs.fxData.alias['module1/domain/user'] = path.normalize(__dirname + '/data/' + id + '/module1/src/domain/user.js');
+    cqrsCore.fxData.alias['module1/domain/user'] = path.normalize(__dirname + '/data/' + id + '/module1/src/domain/user.js');
 
     config.init({
       bus: {
@@ -110,12 +107,10 @@ describe('业务', function() {
 
     saasplat.appPath = path.normalize(__dirname + '/data/' + id);
 
-    cqrs.fxData.alias = {};
-    cqrs.fxData.export = {};
-    cqrs.fxData.container = {};
+    cqrs.clearData();
 
-    cqrs.fxData.alias['module1/command/account_handler'] = path.normalize(__dirname + '/data/' + id + '/module1/src/command/account_handler.js');
-    cqrs.fxData.alias['module1/event/account_handler'] = () => class {
+    cqrsCore.fxData.alias['module1/command/account_handler'] = path.normalize(__dirname + '/data/' + id + '/module1/src/command/account_handler.js');
+    cqrsCore.fxData.alias['module1/event/account_handler'] = () => class {
       @cqrs.event('module1')
       accountCreated({userName}) {
         //  console.log('userName',userName)
@@ -126,7 +121,7 @@ describe('业务', function() {
         eventCount++;
       }
     };
-    cqrs.fxData.alias['module1/domain/user'] = path.normalize(__dirname + '/data/' + id + '/module1/src/domain/user.js');
+    cqrsCore.fxData.alias['module1/domain/user'] = path.normalize(__dirname + '/data/' + id + '/module1/src/domain/user.js');
 
     config.init({
       bus: {
@@ -179,10 +174,10 @@ describe('业务', function() {
     eventCount = 0;
     utils.exists(__dirname + '/module1_updatefiles_1.0.1', __dirname + '/data/' + id + '/module1', utils.copy);
 
-    cqrs.fxData.alias['module1/migration/1.0.1'] = path.normalize(__dirname + '/data/' + id + '/module1/src/migration/1.0.1.js');
-    cqrs.fxData.alias['module1/migration/1.0.1_test2'] = path.normalize(__dirname + '/data/' + id + '/module1/src/migration/1.0.1_test2.js');
+    cqrsCore.fxData.alias['module1/migration/1.0.1'] = path.normalize(__dirname + '/data/' + id + '/module1/src/migration/1.0.1.js');
+    cqrsCore.fxData.alias['module1/migration/1.0.1_test2'] = path.normalize(__dirname + '/data/' + id + '/module1/src/migration/1.0.1_test2.js');
 
-    await Installs.save(['module1'].map(name => ({name, version: '1.0.1', installDate: new Date(), status: 'waitCommit'})));
+    await state.save(['module1'].map(name => ({name, version: '1.0.1', installDate: new Date(), status: 'waitCommit'})));
 
     await cqrs.revertVersion();
 

@@ -13,7 +13,7 @@ import dataSrv from './data';
 import alias from './util/alias';
 import { init as logInit, spLogger as logger } from './util/log';
 import i18n from './util/i18n';
-import Installs from './util/installs';
+import state from './util/state';
 import AutoReload from './util/auto_reload';
 import WatchCompile from './util/watch_compile';
 
@@ -165,10 +165,10 @@ export default class {
       this.modules.forEach(module => {
         let moduleType = module + '/' + itemType;
         let filepath = this._getPath(module, itemType);
-        orm.alias(moduleType, filepath);
+        alias.alias(moduleType, filepath);
       });
     }
-    logger.trace('load ORM type \n', orm.filter(ormTypes));
+    logger.trace('load ORM type \n', alias.filter(ormTypes));
   }
 
   // 加载cqrs
@@ -269,9 +269,7 @@ export default class {
   }
 
   clearData() {
-    boots.clearData();
-    config.clearData();
-    orm.clearData();
+    alias.clearData();
     cqrs.clearData();
     mvc.clearData();
   }
@@ -344,9 +342,9 @@ export default class {
     this.loadCQRS(true);
     this.loadConfig();
 
-    if (await Installs.has('waitCommit')) {
+    if (await state.has('waitCommit')) {
       await cqrs.backMigrate();
-      if (await Installs.getInstallMode() === 'resouce') {
+      if (await state.getInstallMode() === 'resouce') {
         logger.debug(i18n.t('恢复数据库快速表备份'));
         await orm.restore(modules || this.modules, force);
       } else {
@@ -354,7 +352,7 @@ export default class {
         logger.debug(i18n.t('回退数据库迁移'));
         await orm.migrate(modules || this.modules, true);
       }
-      await Installs.rollback(modules || this.modules);
+      await state.rollback(modules || this.modules);
       logger.debug(i18n.t('回滚失败模块完成'));
     } else {
       logger.debug(i18n.t('无回滚任务'));
@@ -366,7 +364,7 @@ export default class {
   // 已有模块升级后需要数据迁移
   async migrate(modules) {
     logger.info(i18n.t('开始迁移模块'));
-    const notCommitteds = await Installs.has('waitCommit');
+    const notCommitteds = await state.has('waitCommit');
     if (notCommitteds) {
       throw new Error(i18n.t('还有上次未安装成功的模块需要回滚'));
     }
@@ -392,13 +390,13 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(modules.map(name => ({
+      await state.save(modules.map(name => ({
         name,
         version: this.moduleConfigs[name].version,
         installDate: new Date(),
         status: 'waitCommit'
       })));
-      await Installs.setInstallMode('migrate');
+      await state.setInstallMode('migrate');
       // 升级系统库
       await orm.migrate(modules, false, 'sysmigration');
       // 升级数据
@@ -407,14 +405,14 @@ export default class {
       await cqrs.revertVersion();
       await cqrs.migrate(modules);
       // 提交
-      await Installs.commit();
+      await state.commit();
     } catch (err) {
       logger.error(i18n.t('数据迁移失败'), err);
       await cqrs.backMigrate();
       // 降级数据
       await orm.migrate(modules, true);
       await orm.migrate(modules, true, 'sysmigration');
-      await Installs.rollback(modules);
+      await state.rollback(modules);
       return false;
     }
     return true;
@@ -424,7 +422,7 @@ export default class {
   async resource(modules) {
 
     logger.info(i18n.t('开始回溯模块'));
-    const notCommitteds = await Installs.has('waitCommit');
+    const notCommitteds = await state.has('waitCommit');
     if (notCommitteds) {
       throw new Error(i18n.t('还有上次未安装成功的模块需要回滚'));
     }
@@ -450,13 +448,13 @@ export default class {
 
     try {
       // 记录
-      await Installs.save(modules.map(name => ({
+      await state.save(modules.map(name => ({
         name,
         version: this.moduleConfigs[name].version,
         installDate: new Date(),
         status: 'waitCommit'
       })));
-      await Installs.setInstallMode('resource');
+      await state.setInstallMode('resource');
       // 之前可能已经安装过，但是卸载后会保留数据表，需要备份
       await orm.backup(modules);
       // 重建
@@ -467,12 +465,12 @@ export default class {
       await cqrs.revertVersion();
       await cqrs.migrate(modules);
       // 提交
-      await Installs.commit();
+      await state.commit();
     } catch (err) {
       logger.error(i18n.t('业务回溯失败'), err);
       await cqrs.backMigrate();
       await orm.restore(modules);
-      await Installs.rollback(modules);
+      await state.rollback(modules);
       return false;
     }
     await orm.removeBackup();
@@ -514,8 +512,10 @@ export default class {
     }
     //
     await dataSrv.init(this.datadb);
-    // this.clearData(); 连接查询库
+    // 连接数据库
     await orm.connect(this.querydb, this.systemdb);
+    await orm.create(this.modules, null, false, 'system');
+    await orm.create(this.modules);
     // 初始化 cqrs
     cqrs.init({
       debug: this.debugMode,
