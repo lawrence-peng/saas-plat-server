@@ -269,6 +269,8 @@ export default class {
   }
 
   clearData() {
+    // 这里需要清除model的define
+    orm.clearData();
     alias.clearData();
     cqrs.clearData();
     mvc.clearData();

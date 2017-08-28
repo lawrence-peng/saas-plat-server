@@ -40,6 +40,8 @@ export default class extends saasplat.eventhandler {
       account.email = email;
     }
 
+    console.log('accountUpdated event handler',QQ)
+
     if (QQ !== undefined) {
       account.QQ = QQ;
     }

@@ -50,6 +50,7 @@ export default class UserAccount extends Account {
       userName: this.userName,
       QQ
     });
+
   }
 
   when({

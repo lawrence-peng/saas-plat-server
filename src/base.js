@@ -10,7 +10,7 @@ import orm from './orm';
 import task from './task';
 import dataSrv from './data';
 import workflow from './workflow';
-import {spLogger as logger} from './util/log';
+import { spLogger as logger } from './util/log';
 import conf from './config';
 import assert from 'assert';
 import i18n from './util/i18n';
@@ -191,7 +191,13 @@ global.command = cqrs.command;
 
 saasplat.commandhandler = class extends saasplat.mixins(cqrs.CommandHandler) {
 
-  // 这里的model被删除，所有业务数据都按照Repository中数据计算不能用model
+  // 下面的这条约束是不合理的，handler中可以使用model，区别就是传到了前端还是没传到handler中直接调用都是一样的
+  // 而且repository中是没有存储列表的功能，所有数据都是从model中查询
+  // ** [恢复] 这里的model被删除，所有业务数据都按照Repository中数据计算不能用model **
+  model(name, module) {
+    return saasplat.model.get(name, checkModule(module || this.module));
+  }
+
   // 默认名称为voucher，建议每个模块都有一个voucher主对象
   getRepository(name = 'voucher', module) {
     const sp = name.split('/');
@@ -201,9 +207,11 @@ saasplat.commandhandler = class extends saasplat.mixins(cqrs.CommandHandler) {
     }
     return {
       get: async(id, ...options) => {
-        let rep = await this.repository.get(name, id, checkModule(module || this.module), options);
+        let rep = await this.repository.get(name, id, checkModule(module ||
+          this.module), options);
         if (!rep) {
-          throw new Error((module || this.module) + '/' + name + ':' + id + i18n.t('不存在'))
+          throw new Error((module || this.module) + '/' + name + ':' + id +
+            i18n.t('不存在'))
         }
         return rep;
       }
@@ -228,7 +236,8 @@ saasplat.commandhandler = class extends saasplat.mixins(cqrs.CommandHandler) {
   }
 
   async getWorkflowDefines(name = 'voucher', module) {
-    const wfs = await workflow.getWorkflows(name, checkModule(module || this.module));
+    const wfs = await workflow.getWorkflows(name, checkModule(module ||
+      this.module));
     return wfs;
   }
 
@@ -257,7 +266,8 @@ saasplat.eventhandler = class extends saasplat.mixins(cqrs.EventHandler) {
   }
 
   addTask(name, spec, command, data, description, module) {
-    return task.add(name, checkModule(module || this.module), spec, command, data, description);
+    return task.add(name, checkModule(module || this.module), spec, command,
+      data, description);
   }
 
   removeTask(name, module) {
@@ -268,12 +278,17 @@ saasplat.eventhandler = class extends saasplat.mixins(cqrs.EventHandler) {
 saasplat.migration = class extends saasplat.mixins(saasplat.base) {
   getRepository(name, module, ...porps) {
     return {
-      get: (id) => cqrs.repository.getRepository().get(name, id, module || this.module, ...porps)
+      get: (id) => cqrs.repository.getRepository().get(name, id, module ||
+        this.module, ...porps)
     };
   }
 
-  // 业务逻辑不应该基于查询数据，采用repository.visit方式 model(name, module) {   return
-  // saasplat.model.get(name, checkModule(module || this.module)); }
+  // 下面的约束也是不合理的，model是可以使用的
+  // ** [恢复]业务逻辑不应该基于查询数据，采用repository.visit方式  **
+  // repository无法实现visit
+  model(name, module) {
+    return saasplat.model.get(name, checkModule(module || this.module));
+  }
 
   getAggregate(name, module) {
     return cqrs.Aggregate.get(name, checkModule(module || this.module));
@@ -305,26 +320,31 @@ class Migration extends saasplat.mixins(saasplat.base) {
     if (!tableName) {
       return tableName;
     }
-    const px = this.prefix
-      ? this.prefix + '_'
-      : '';
-    return px + `${ (options && options.module) || this.module}_${tableName}`;
+    const px = this.prefix ?
+      this.prefix + '_' :
+      '';
+    return px +
+      `${ (options && options.module) || this.module}_${tableName}`;
   }
 
   createTable(tableName, attributes, options, ...others) {
-    this.queryInterface.createTable(this.getTableName(tableName, options), attributes, options, ...others);
+    this.queryInterface.createTable(this.getTableName(tableName, options),
+      attributes, options, ...others);
   }
 
   dropTable(tableName, options, ...others) {
-    this.queryInterface.dropTable(this.getTableName(tableName, options), options, ...others);
+    this.queryInterface.dropTable(this.getTableName(tableName, options),
+      options, ...others);
   }
 
   dropAllTables(options, ...others) {
     return new Promise((resolve) => {
       const module = options.module || this.module;
       this.showAllTables(options).then(tableNames => {
-        const skips = tableNames.filter(name => name.split('_')[0] !== module);
-        const sks = (options.skip || []).map(name => `${module}_${name}`);
+        const skips = tableNames.filter(name => name.split('_')[0] !==
+          module);
+        const sks = (options.skip || []).map(name =>
+          `${module}_${name}`);
         options.skip = [
           ...sks,
           ...skips
@@ -335,108 +355,142 @@ class Migration extends saasplat.mixins(saasplat.base) {
   }
 
   renameTable(before, after, options, ...others) {
-    return this.queryInterface.renameTable(this.getTableName(before, options), this.getTableName(after, options), ...others);
+    return this.queryInterface.renameTable(this.getTableName(before,
+      options), this.getTableName(after, options), ...others);
   }
 
   showAllTables(options, ...others) {
-    return this.queryInterface.showAllTables(options, ...others).then(tableNames => {
-      const module = options.module || this.module;
-      return tableNames.filter(name => name.split('_')[0] === module).map(name => {
-        return name.substr(name.indexOf('_') + 1);
+    return this.queryInterface.showAllTables(options, ...others).then(
+      tableNames => {
+        const module = options.module || this.module;
+        return tableNames.filter(name => name.split('_')[0] === module).map(
+          name => {
+            return name.substr(name.indexOf('_') + 1);
+          });
       });
-    });
   }
 
   describeTable(tableName, options, ...others) {
-    return this.queryInterface.describeTable(this.getTableName(tableName, options), options, ...others);
+    return this.queryInterface.describeTable(this.getTableName(tableName,
+      options), options, ...others);
   }
 
   addColumn(tableName, key, attribute, options, ...others) {
-    return this.queryInterface.addColumn(this.getTableName(tableName, options), key, attribute, options, ...others);
+    return this.queryInterface.addColumn(this.getTableName(tableName,
+      options), key, attribute, options, ...others);
   }
 
   removeColumn(tableName, attributeName, options, ...others) {
-    return this.queryInterface.removeColumn(this.getTableName(tableName, options), attributeName, options, ...others);
+    return this.queryInterface.removeColumn(this.getTableName(tableName,
+      options), attributeName, options, ...others);
   }
 
-  changeColumn(tableName, attributeName, dataTypeOrOptions, options, ...others) {
-    return this.queryInterface.changeColumn(this.getTableName(tableName, options), attributeName, dataTypeOrOptions, options, ...others);
+  changeColumn(tableName, attributeName, dataTypeOrOptions, options, ...
+    others) {
+    return this.queryInterface.changeColumn(this.getTableName(tableName,
+      options), attributeName, dataTypeOrOptions, options, ...others);
   }
 
-  renameColumn(tableName, attributeName, attrNameBefore, attrNameAfter, options, ...others) {
-    return this.queryInterface.renameColumn(this.getTableName(tableName, options), attributeName, attrNameAfter, options, ...others);
+  renameColumn(tableName, attributeName, attrNameBefore, attrNameAfter,
+    options, ...others) {
+    return this.queryInterface.renameColumn(this.getTableName(tableName,
+      options), attributeName, attrNameAfter, options, ...others);
   }
 
   addIndex(tableName, attributes, options, rawTablename, ...others) {
-    return this.queryInterface.addIndex(this.getTableName(tableName, options), attributes, options, this.getTableName(rawTablename, options), ...others);
+    return this.queryInterface.addIndex(this.getTableName(tableName,
+      options), attributes, options, this.getTableName(rawTablename,
+      options), ...others);
   }
 
   showIndex(tableName, options, ...others) {
-    return this.queryInterface.showIndex(this.getTableName(tableName, options), options, ...others);
+    return this.queryInterface.showIndex(this.getTableName(tableName,
+      options), options, ...others);
   }
 
   nameIndexes(indexes, rawTablename, options, ...others) {
-    return this.queryInterface.nameIndexes((indexes || []).map(name => this.getTableName(name, options)), this.getTableName(rawTablename, options), ...others);
+    return this.queryInterface.nameIndexes((indexes || []).map(name => this
+      .getTableName(name, options)), this.getTableName(rawTablename,
+      options), ...others);
   }
 
   getForeignKeysForTables(tableNames, options, ...others) {
-    return this.queryInterface.getForeignKeysForTables((tableNames || []).map(tableName => this.getTableName(tableName, options)), options, ...others);
+    return this.queryInterface.getForeignKeysForTables((tableNames || []).map(
+        tableName => this.getTableName(tableName, options)), options, ...
+      others);
   }
 
   removeIndex(tableName, indexNameOrAttributes, options, ...others) {
-    return this.queryInterface.removeIndex(this.getTableName(tableName, options), indexNameOrAttributes, options, ...others);
+    return this.queryInterface.removeIndex(this.getTableName(tableName,
+      options), indexNameOrAttributes, options, ...others);
   }
 
   addConstraint(tableName, attributes, options, rawTablename, ...others) {
-    return this.queryInterface.addConstraint(this.getTableName(tableName, options), attributes, options, this.getTableName(rawTablename, options), ...others);
+    return this.queryInterface.addConstraint(this.getTableName(tableName,
+      options), attributes, options, this.getTableName(rawTablename,
+      options), ...others);
   }
 
   showConstraint(tableName, options, ...others) {
-    return this.queryInterface.showConstraint(this.getTableName(tableName, options), options, ...others);
+    return this.queryInterface.showConstraint(this.getTableName(tableName,
+      options), options, ...others);
   }
 
   removeConstraint(tableName, constraintName, options, ...others) {
-    return this.queryInterface.removeConstraint(this.getTableName(tableName, options), this.getTableName(constraintName, options), options, ...others);
+    return this.queryInterface.removeConstraint(this.getTableName(tableName,
+        options), this.getTableName(constraintName, options), options,
+      ...others);
   }
 
   insert(instance, tableName, values, options, ...others) {
-    return this.queryInterface.insert(instance, this.getTableName(tableName, options), values, options, ...others);
+    return this.queryInterface.insert(instance, this.getTableName(tableName,
+      options), values, options, ...others);
   }
 
-  upsert(tableName, valuesByField, updateValues, where, model, options, ...others) {
-    return this.queryInterface.upsert(this.getTableName(tableName, options), valuesByField, updateValues, where, model, options, ...others);
+  upsert(tableName, valuesByField, updateValues, where, model, options, ...
+    others) {
+    return this.queryInterface.upsert(this.getTableName(tableName, options),
+      valuesByField, updateValues, where, model, options, ...others);
   }
 
   bulkInsert(tableName, records, options, attributes, ...others) {
-    return this.queryInterface.bulkInsert(this.getTableName(tableName, options), records, options, attributes, ...others);
+    return this.queryInterface.bulkInsert(this.getTableName(tableName,
+      options), records, options, attributes, ...others);
   }
 
   update(instance, tableName, values, identifier, options, ...others) {
-    return this.queryInterface.update(instance, this.getTableName(tableName, options), values, identifier, options, ...others);
+    return this.queryInterface.update(instance, this.getTableName(tableName,
+      options), values, identifier, options, ...others);
   }
 
   bulkUpdate(tableName, values, identifier, options, ...others) {
-    return this.queryInterface.bulkUpdate(this.getTableName(tableName, options), values, identifier, options, ...others);
+    return this.queryInterface.bulkUpdate(this.getTableName(tableName,
+      options), values, identifier, options, ...others);
   }
 
   delete(instance, tableName, identifier, options, ...others) {
-    return this.queryInterface.delete(instance, this.getTableName(tableName, options), identifier, options, ...others);
+    return this.queryInterface.delete(instance, this.getTableName(tableName,
+      options), identifier, options, ...others);
   }
 
   bulkDelete(tableName, identifier, options, ...others) {
-    return this.queryInterface.bulkDelete(this.getTableName(tableName, options), identifier, options, ...others);
+    return this.queryInterface.bulkDelete(this.getTableName(tableName,
+      options), identifier, options, ...others);
   }
 
   select(model, tableName, options, ...others) {
-    return this.queryInterface.select(model, this.getTableName(tableName, options), options, ...others);
+    return this.queryInterface.select(model, this.getTableName(tableName,
+      options), options, ...others);
   }
 
   increment(instance, tableName, values, identifier, options, ...others) {
-    return this.queryInterface.increment(instance, this.getTableName(tableName, options), tableName, values, options, ...others);
+    return this.queryInterface.increment(instance, this.getTableName(
+      tableName, options), tableName, values, options, ...others);
   }
 
   decrement(instance, tableName, values, identifier, options, ...others) {
-    return this.queryInterface.decrement(instance, this.getTableName(tableName, options), values, identifier, options, ...others);
+    return this.queryInterface.decrement(instance, this.getTableName(
+      tableName, options), values, identifier, options, ...others);
   }
 
   up() {}
