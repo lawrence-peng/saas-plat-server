@@ -106,6 +106,7 @@ describe('业务', function() {
     utils.exists(__dirname + '/module1', __dirname + '/data/' + id + '/module1', utils.copy);
 
     saasplat.appPath = path.normalize(__dirname + '/data/' + id);
+    console.log('=>',saasplat.appPath);
 
     cqrs.clearData();
 
