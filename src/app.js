@@ -10,6 +10,10 @@ import config from './config';
 import boots from './boots';
 import task from './task';
 import dataSrv from './data';
+import user from './user';
+import privilege from './privilege';
+import workflow from './workflow';
+
 import alias from './util/alias';
 import { init as logInit, spLogger as logger } from './util/log';
 import i18n from './util/i18n';
@@ -528,6 +532,9 @@ export default class {
       snapshotStoreage: this.snapshotStoreage,
       ...cfg.cqrs
     });
+    await user.init();
+    await privilege.init();
+    await workflow.init();
     // task
     await task.init({
       ...cfg.task

@@ -1,4 +1,5 @@
 import i18n from '../../../util/i18n';
+import privilege from '../../../privilege';
 
 export default class extends think.logic.base {
 
@@ -12,14 +13,13 @@ export default class extends think.logic.base {
     if (!flag) {
       return this.fail(this.errors());
     }
-    // 功能权限验证，这里的服务一般有平台user模块提供，如果没有不启用权限验证
-    const privilegeService = saasplat.service('privilege');
-    if (privilegeService) {
+    // 功能权限验证
+    if (privilege) {
       const module = this.post('module') || this.post('name').split('/')[0];
-      const enabled = await privilegeService.check(
+      const enabled = await privilege.check(
         'enable', 'command', module, this.post('name'));
       if (!enabled) {
-        const privilege = await privilegeService.getPrivilege('command', module,
+        const privilege = await privilege.getPrivilege('command', module,
           this.post('name'));
         return this.fail(i18n.t('无') + privilege ? privilege.name : '' +
           i18n.t('权限'));
